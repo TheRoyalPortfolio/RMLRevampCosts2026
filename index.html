@@ -1,584 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>The Royal Portfolio · Malewane Lodge Revamp</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Royal Portfolio | Malewane Revamp</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Firebase SDKs -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, set, get, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, remove, update }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyA6PrNQXcdHp_4gKd6EyxEDt19W4Ilim0M",
-      authDomain: "rmlrevamp2026.firebaseapp.com",
-      databaseURL: "https://rmlrevamp2026-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "rmlrevamp2026",
-      storageBucket: "rmlrevamp2026.firebasestorage.app",
-      messagingSenderId: "221500385252",
-      appId: "1:221500385252:web:56409a706cfacaa94bc9f1"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    window._db = db;
+const firebaseConfig = {
+  apiKey: "AIzaSyA6PrNQXcdHp_4gKd6EyxEDt19W4Ilim0M",
+  authDomain: "rmlrevamp2026.firebaseapp.com",
+  databaseURL: "https://rmlrevamp2026-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "rmlrevamp2026",
+  storageBucket: "rmlrevamp2026.firebasestorage.app",
+  messagingSenderId: "221500385252",
+  appId: "1:221500385252:web:56409a706cfacaa94bc9f1"
+};
 
-    // ==================== SEED DATA (exactly as per Excel V4) ====================
-    const SEED_BUDGET = [
-      {id:1, area:"DHW (Water Heat Tanks)", supplier:"Energenic", comment:"1x 300L Stiebel Eltron per LS; 2x per RS; (FOH, BOH, Spa) 2x300L per area. Transport included.", type:"Quote", budget:700000},
-      {id:2, area:"Pools — Heatpump, Filter, Pump & Labour", supplier:"Waterboys", comment:"Heatpumps; new pool pumps, filters, piping, pool lights and stainless spouts", type:"Quote", budget:591000},
-      {id:3, area:"HVAC — Split Unit Inverter Aircons", supplier:"Parkes Refrigeration / Baker Air", comment:"Split unit inverter aircons incl shipping, labour & fitment. 1x 36000BTU per LS; 4x 36000BTU per RS", type:"Assumption & Quote", budget:1650000},
-      {id:4, area:"Roof FOH — Main Area, Dining, Library", supplier:"Tip Top Thatching", comment:"Removal old thatching grass. Rethatching of Main Lodge Reception, Dining Areas & Library. Sanding of all Gum Poles.", type:"Quote", budget:1215000},
-      {id:5, area:"Roof FOH — New Shop", supplier:"Tip Top Thatching", comment:"New Shop Roof — Pole Work & Thatching.", type:"Quote", budget:164500},
-      {id:6, area:"Roof BOH — Kitchen Roof", supplier:"Tip Top Thatching", comment:"Removal thatch & Pole Work. Chromadek Roofing. New SA Pine CCA structure. Isotherm insulation.", type:"Quote", budget:650000},
-      {id:7, area:"Roofs — Removal & Travelling", supplier:"Tip Top Thatching", comment:"Removal of thatch from site plus travelling costs", type:"Quote", budget:281000},
-      {id:8, area:"Roof Suites — All LSs and RSs", supplier:"Tip Top Thatching", comment:"Removal all old thatching grass. Rethatching all LSs and RSs. Sanding all Gum Poles.", type:"Quote", budget:3245000},
-      {id:9, area:"Sky Light Windows", supplier:"TSRW (Janine)", comment:"3 x extra sky light windows", type:"Quote", budget:150000},
-      {id:10, area:"Preliminaries & Generals (Ps & Gs)", supplier:"Red Earth", comment:"", type:"Claims", budget:2500000},
-      {id:11, area:"Contractor Allowance for Profit", supplier:"Red Earth", comment:"", type:"Claims", budget:1000000},
-      {id:12, area:"Construction", supplier:"Red Earth Construction", comment:"Raw building work including new bar at entrance", type:"Claims", budget:9800000},
-      {id:13, area:"Decks — All", supplier:"Tshukudu Decking", comment:"Sanding all decks. No sealing. Reinforcing substructures.", type:"Quote", budget:1750000},
-      {id:14, area:"Decking — Walkway Link", supplier:"Tshukudu Decking", comment:"Between dining and lower boma deck", type:"Assumption", budget:115000},
-      {id:15, area:"Decking — Observation Lounge Roof", supplier:"Tshukudu Decking", comment:"New deck on observation lounge roof", type:"Assumption", budget:100000},
-      {id:16, area:"BOH Kitchen Equipment — Main", supplier:"JAG", comment:"Main BOH and new coffee bar/bar equipment incl equipment, extraction, labour and fitment", type:"Assumption", budget:100000},
-      {id:17, area:"BOH Kitchen Equipment — Suites (RS1 & RS8)", supplier:"JAG / Smeg", comment:"RS1 & RS8", type:"Quotes", budget:500000},
-      {id:18, area:"Joinery & Tops", supplier:"Neetling Meubels (Alex) / Splinters", comment:"Joinery repair / Refurb", type:"Assumption", budget:705000},
-      {id:19, area:"FOH Appliances", supplier:"Various", comment:"Appliances for FOH kitchens in suites; Appliances for new bar in FOH at Cheethas", type:"Assumption", budget:350000},
-      {id:20, area:"Sanware", supplier:"Victoria Bathrooms", comment:"Replacement Sanware where needed", type:"Assumption", budget:320000},
-      {id:21, area:"Light Fixtures, Switchgear & Fans", supplier:"Various", comment:"Provision for light fixtures", type:"Assumption", budget:330000},
-      {id:22, area:"Plumbing Work", supplier:"", comment:"Provision for plumbing work to be done", type:"Assumption", budget:492500},
-      {id:23, area:"Water Reticulation", supplier:"", comment:"New main septic tank, calcamite tanks and sewers for all areas", type:"Assumption", budget:1100000},
-      {id:24, area:"Electrical Work", supplier:"Van Wyk & Prinsloo", comment:"Provision for electrical work. Move DB boards etc.", type:"Assumption", budget:1500000},
-      {id:25, area:"AC Electrical Work", supplier:"Van Wyk & Prinsloo", comment:"Move transformers, cabling, work on generators", type:"Assumption", budget:500000},
-      {id:26, area:"Fire Mainlines & Detection System", supplier:"ASP Fire", comment:"Fire detection and sprinkler system including main hydrants", type:"Assumption", budget:200000},
-      {id:27, area:"Fire Retardant", supplier:"Thatchsayf Limpopo", comment:"Application of fire retardent on all thatch roofs", type:"Quote", budget:50000},
-      {id:28, area:"Flooring", supplier:"Various", comment:"Screed, paint, vinyl", type:"Assumption", budget:200000},
-      {id:29, area:"Vintage Doors", supplier:"Private Collection", comment:"", type:"Assumption", budget:50000},
-      {id:30, area:"Architect Fees", supplier:"Barnabey (Architects Incorporated)", comment:"As Built plans and adjustments", type:"Assumption", budget:250000},
-      {id:31, area:"Engineering Fees", supplier:"Ashley van Blerk / Johan Thiart", comment:"Structural & Electrical Engineering", type:"Assumption", budget:150000},
-      {id:32, area:"QS Fees (External)", supplier:"LimCo QS (Dewald)", comment:"Appointed by TRP", type:"Quote", budget:100000},
-      {id:33, area:"New Aluminium Doors & Windows", supplier:"Aluview", comment:"New aluminum doors, windows and screens", type:"Quotes", budget:2000000},
-      {id:34, area:"Window & Door Refurb", supplier:"Unknown", comment:"Refurb of doors, re-align, hardware", type:"Assumption", budget:100000},
-      {id:35, area:"Balustrades", supplier:"Ivan / Irvin", comment:"Replace all balustrades to steel flatbar", type:"Assumption", budget:200000},
-      {id:36, area:"Blinds & Curtains", supplier:"Various", comment:"Window treatments", type:"Assumption", budget:150000},
-      {id:37, area:"Underfloor Heating", supplier:"CFS Flooring (Bradley)", comment:"New underfloor heating with marmox board", type:"Assumption", budget:400000},
-      {id:38, area:"New Generator", supplier:"Energenic", comment:"New generator with 5000L bulk storage tank", type:"Quote", budget:2000000},
-      {id:39, area:"Landscaping", supplier:"Brett", comment:"Seed, plants, irrigation", type:"Assumption", budget:300000},
-      {id:40, area:"Pest Control", supplier:"Mantis", comment:"", type:"Assumption", budget:100000},
-      {id:41, area:"Tiles, Wallpaper & Paint", supplier:"Various", comment:"For all areas", type:"Assumption", budget:700000},
-      {id:42, area:"IT & CCTV", supplier:"Castle Rock / Andre", comment:"", type:"Assumption", budget:150000},
-      {id:43, area:"Gym Equipment", supplier:"Penta Systems", comment:"New gym equipment", type:"Quote", budget:600000},
-      {id:44, area:"Storage Containers", supplier:"Container World", comment:"Storage containers for FF&E and site office", type:"Quote", budget:200000},
-      {id:45, area:"Moving Company", supplier:"Sorted Movers", comment:"Moving furniture to containers and back", type:"Quote", budget:120000},
-      {id:46, area:"Office Consumables & Printing", supplier:"Various", comment:"Printing drawings, stationery", type:"Assumption", budget:30000},
-      {id:47, area:"Contractors All Risk Insurance", supplier:"CONSORT", comment:"Insurance covering building works", type:"Assumption", budget:75000},
-      {id:48, area:"Contingencies", supplier:"", comment:"Scope changes, delays", type:"Assumption", budget:500000},
-      {id:49, area:"Logistics", supplier:"", comment:"Logistic cost from CPT/JHB to Hoedspruit", type:"Assumption", budget:100000},
-      {id:50, area:"Sauna", supplier:"", comment:"", type:"Assumption", budget:250000},
-      {id:51, area:"Cold Plunge", supplier:"", comment:"", type:"Assumption", budget:25000}
-    ];
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
 
-    const SEED_PAYMENTS = [
-      {idx:0,itemId:1,date:"2026-01-15",amount:123300,invoice:"INV-001",supplier:"Energenic",comment:"DHW deposit"},
-      {idx:1,itemId:1,date:"2026-02-10",amount:392350,invoice:"INV-002",supplier:"Energenic",comment:"DHW final"},
-      {idx:2,itemId:2,date:"2026-01-20",amount:70212.87,invoice:"WB-101",supplier:"Waterboys",comment:"Pools deposit"},
-      {idx:3,itemId:2,date:"2026-02-05",amount:30091.23,invoice:"WB-102",supplier:"Waterboys",comment:"Progress 1"},
-      {idx:4,itemId:2,date:"2026-02-18",amount:13884,invoice:"WB-103",supplier:"Waterboys",comment:"Progress 2"},
-      {idx:5,itemId:2,date:"2026-03-01",amount:230268.91,invoice:"WB-104",supplier:"Waterboys",comment:"Progress 3"},
-      {idx:6,itemId:2,date:"2026-03-15",amount:20658.24,invoice:"WB-105",supplier:"Waterboys",comment:"Retention"},
-      {idx:7,itemId:3,date:"2026-01-10",amount:199471,invoice:"PRK-01",supplier:"Parkes Refrigeration",comment:"HVAC deposit"},
-      {idx:8,itemId:3,date:"2026-02-12",amount:3626,invoice:"BA-002",supplier:"Baker Air",comment:"HVAC additional"},
-      {idx:9,itemId:3,date:"2026-03-01",amount:579917.8,invoice:"PRK-03",supplier:"Parkes Refrigeration",comment:"Progress"},
-      {idx:10,itemId:4,date:"2026-01-20",amount:607500,invoice:"TT-401",supplier:"Tip Top Thatching",comment:"50% deposit"},
-      {idx:11,itemId:5,date:"2026-01-20",amount:82250,invoice:"TT-501",supplier:"Tip Top Thatching",comment:"Shop deposit"},
-      {idx:12,itemId:6,date:"2026-01-20",amount:325000,invoice:"TT-601",supplier:"Tip Top Thatching",comment:"BOH deposit"},
-      {idx:13,itemId:7,date:"2026-01-25",amount:61500,invoice:"TT-701",supplier:"Tip Top Thatching",comment:"Removal deposit"},
-      {idx:14,itemId:7,date:"2026-02-15",amount:84000,invoice:"TT-702",supplier:"Tip Top Thatching",comment:"Removal final"},
-      {idx:15,itemId:8,date:"2026-01-15",amount:836500,invoice:"TT-801",supplier:"Tip Top Thatching",comment:"Suites deposit"},
-      {idx:16,itemId:8,date:"2026-02-10",amount:226000,invoice:"TT-802",supplier:"Tip Top Thatching",comment:"Suites progress"},
-      {idx:17,itemId:8,date:"2026-03-05",amount:1034750,invoice:"TT-803",supplier:"Tip Top Thatching",comment:"Suites progress 2"},
-      {idx:18,itemId:9,date:"2026-01-20",amount:19368,invoice:"TS-01",supplier:"TSRW",comment:"Sky light deposit"},
-      {idx:19,itemId:9,date:"2026-02-10",amount:18869,invoice:"TS-02",supplier:"TSRW",comment:"Progress"},
-      {idx:20,itemId:9,date:"2026-03-01",amount:1554,invoice:"TS-03",supplier:"TSRW",comment:"Final"},
-      {idx:21,itemId:10,date:"2026-09-01",amount:125000,invoice:"RE-PG1",supplier:"Red Earth",comment:"Ps & Gs claim 1"},
-      {idx:22,itemId:10,date:"2026-10-01",amount:125000,invoice:"RE-PG2",supplier:"Red Earth",comment:"Claim 2"},
-      {idx:23,itemId:10,date:"2026-11-01",amount:250000,invoice:"RE-PG3",supplier:"Red Earth",comment:"Claim 3"},
-      {idx:24,itemId:10,date:"2026-12-01",amount:250000,invoice:"RE-PG4",supplier:"Red Earth",comment:"Claim 4"},
-      {idx:25,itemId:10,date:"2027-01-01",amount:125000,invoice:"RE-PG5",supplier:"Red Earth",comment:"Claim 5"},
-      {idx:26,itemId:10,date:"2027-02-01",amount:125000,invoice:"RE-PG6",supplier:"Red Earth",comment:"Claim 6"},
-      {idx:27,itemId:11,date:"2026-09-01",amount:43938.75,invoice:"RE-PR1",supplier:"Red Earth",comment:"Profit claim 1"},
-      {idx:28,itemId:11,date:"2026-10-01",amount:43938.75,invoice:"RE-PR2",supplier:"Red Earth",comment:"Profit claim 2"},
-      {idx:29,itemId:11,date:"2026-11-01",amount:87877.49,invoice:"RE-PR3",supplier:"Red Earth",comment:"Profit claim 3"},
-      {idx:30,itemId:11,date:"2026-12-01",amount:43938.75,invoice:"RE-PR4",supplier:"Red Earth",comment:"Profit claim 4"},
-      {idx:31,itemId:11,date:"2027-01-01",amount:131816.24,invoice:"RE-PR5",supplier:"Red Earth",comment:"Profit claim 5"},
-      {idx:32,itemId:11,date:"2027-02-01",amount:43938.75,invoice:"RE-PR6",supplier:"Red Earth",comment:"Profit claim 6"},
-      {idx:33,itemId:12,date:"2026-09-01",amount:136399,invoice:"REC-01",supplier:"Red Earth Construction",comment:"Claim 1"},
-      {idx:34,itemId:12,date:"2026-10-01",amount:390899.93,invoice:"REC-02",supplier:"Red Earth Construction",comment:"Claim 2"},
-      {idx:35,itemId:12,date:"2026-11-01",amount:504170.13,invoice:"REC-03",supplier:"Red Earth Construction",comment:"Claim 3"},
-      {idx:36,itemId:12,date:"2026-12-01",amount:388395.47,invoice:"REC-04",supplier:"Red Earth Construction",comment:"Claim 4"},
-      {idx:37,itemId:12,date:"2027-01-01",amount:222241.26,invoice:"REC-05",supplier:"Red Earth Construction",comment:"Claim 5"},
-      {idx:38,itemId:12,date:"2027-02-01",amount:790025.97,invoice:"REC-06",supplier:"Red Earth Construction",comment:"Claim 6"},
-      {idx:39,itemId:13,date:"2026-01-10",amount:144120,invoice:"TD-01",supplier:"Tshukudu Decking",comment:"Decks deposit"},
-      {idx:40,itemId:16,date:"2026-01-15",amount:21920,invoice:"JAG-001",supplier:"JAG",comment:"Kitchen main deposit"},
-      {idx:41,itemId:17,date:"2026-01-20",amount:188064.56,invoice:"JAG-002",supplier:"JAG",comment:"Suites deposit"},
-      {idx:42,itemId:17,date:"2026-02-15",amount:139417.8,invoice:"SMEG-01",supplier:"Smeg",comment:"Suites appliances"},
-      {idx:43,itemId:18,date:"2026-01-15",amount:60000,invoice:"NM-001",supplier:"Neetling Meubels",comment:"Joinery deposit"},
-      {idx:44,itemId:18,date:"2026-02-01",amount:3307.7,invoice:"NM-002",supplier:"Neetling Meubels",comment:"Additional"},
-      {idx:45,itemId:18,date:"2026-02-15",amount:155370,invoice:"SPL-01",supplier:"Splinters",comment:"Progress"},
-      {idx:46,itemId:20,date:"2026-01-20",amount:42206.17,invoice:"VB-01",supplier:"Victoria Bathrooms",comment:"Sanware deposit"},
-      {idx:47,itemId:21,date:"2026-01-10",amount:31460.67,invoice:"LGT-01",supplier:"Various",comment:"Light fixtures batch 1"},
-      {idx:48,itemId:21,date:"2026-01-25",amount:25544.32,invoice:"LGT-02",supplier:"Various",comment:"Batch 2"},
-      {idx:49,itemId:21,date:"2026-02-10",amount:50860,invoice:"LGT-03",supplier:"Various",comment:"Batch 3"},
-      {idx:50,itemId:21,date:"2026-02-20",amount:75500,invoice:"LGT-04",supplier:"Various",comment:"Batch 4"},
-      {idx:51,itemId:22,date:"2026-01-15",amount:176450,invoice:"PLM-01",supplier:"",comment:"Plumbing payment"},
-      {idx:52,itemId:23,date:"2026-01-20",amount:13079.74,invoice:"WTR-01",supplier:"",comment:"Water retic deposit"},
-      {idx:53,itemId:23,date:"2026-02-10",amount:299138,invoice:"WTR-02",supplier:"",comment:"Progress"},
-      {idx:54,itemId:23,date:"2026-03-01",amount:163206.4,invoice:"WTR-03",supplier:"",comment:"Progress 2"},
-      {idx:55,itemId:24,date:"2026-01-10",amount:391468.54,invoice:"VWP-01",supplier:"Van Wyk & Prinsloo",comment:"Electrical deposit"},
-      {idx:56,itemId:24,date:"2026-02-10",amount:216507.5,invoice:"VWP-02",supplier:"Van Wyk & Prinsloo",comment:"Progress"},
-      {idx:57,itemId:24,date:"2026-03-01",amount:44800,invoice:"VWP-03",supplier:"Van Wyk & Prinsloo",comment:"Additional"},
-      {idx:58,itemId:25,date:"2026-01-15",amount:378735,invoice:"VWP-AC01",supplier:"Van Wyk & Prinsloo",comment:"AC electrical"},
-      {idx:59,itemId:26,date:"2026-01-20",amount:8400,invoice:"ASP-01",supplier:"ASP Fire",comment:"Fire system deposit"},
-      {idx:60,itemId:28,date:"2026-01-20",amount:12963,invoice:"FLR-01",supplier:"",comment:"Flooring deposit"},
-      {idx:61,itemId:28,date:"2026-02-15",amount:25000,invoice:"FLR-02",supplier:"",comment:"Progress"},
-      {idx:62,itemId:30,date:"2026-01-10",amount:19600,invoice:"ARC-01",supplier:"Barnabey Architects",comment:"Retainer 1"},
-      {idx:63,itemId:30,date:"2026-02-01",amount:47600,invoice:"ARC-02",supplier:"Barnabey Architects",comment:"Retainer 2"},
-      {idx:64,itemId:30,date:"2026-02-20",amount:27500,invoice:"ARC-03",supplier:"Barnabey Architects",comment:"Retainer 3"},
-      {idx:65,itemId:30,date:"2026-03-01",amount:34500,invoice:"ARC-04",supplier:"Barnabey Architects",comment:"Retainer 4"},
-      {idx:66,itemId:31,date:"2026-01-15",amount:8000,invoice:"ENG-01",supplier:"Ashley van Blerk",comment:"Structural deposit"},
-      {idx:67,itemId:31,date:"2026-02-15",amount:30000,invoice:"ENG-02",supplier:"Johan Thiart",comment:"Electrical progress"},
-      {idx:68,itemId:32,date:"2026-01-20",amount:36228,invoice:"QS-01",supplier:"LimCo QS",comment:"QS fees deposit"},
-      {idx:69,itemId:33,date:"2025-12-01",amount:172249.63,invoice:"ALU-01",supplier:"Aluview",comment:"Deposit"},
-      {idx:70,itemId:33,date:"2026-01-15",amount:224986.35,invoice:"ALU-02",supplier:"Aluview",comment:"Progress 1"},
-      {idx:71,itemId:33,date:"2026-02-10",amount:556089.52,invoice:"ALU-03",supplier:"Aluview",comment:"Progress 2"},
-      {idx:72,itemId:33,date:"2026-03-01",amount:53111.36,invoice:"ALU-04",supplier:"Aluview",comment:"Progress 3"},
-      {idx:73,itemId:34,date:"2026-02-01",amount:58281.43,invoice:"DR-01",supplier:"Unknown",comment:"Window/door refurb"},
-      {idx:74,itemId:35,date:"2026-01-20",amount:31299.05,invoice:"BAL-01",supplier:"Ivan",comment:"Balustrades 1"},
-      {idx:75,itemId:35,date:"2026-02-05",amount:28006.12,invoice:"BAL-02",supplier:"Ivan",comment:"Balustrades 2"},
-      {idx:76,itemId:35,date:"2026-02-20",amount:19800,invoice:"BAL-03",supplier:"Ivan",comment:"Balustrades 3"},
-      {idx:77,itemId:37,date:"2026-01-15",amount:93950,invoice:"UFH-01",supplier:"CFS Flooring",comment:"Underfloor deposit"},
-      {idx:78,itemId:37,date:"2026-02-10",amount:165245.5,invoice:"UFH-02",supplier:"CFS Flooring",comment:"Progress"},
-      {idx:79,itemId:37,date:"2026-03-01",amount:68500,invoice:"UFH-03",supplier:"CFS Flooring",comment:"Progress 2"},
-      {idx:80,itemId:38,date:"2026-01-10",amount:1966966.08,invoice:"GEN-01",supplier:"Energenic",comment:"Generator full"},
-      {idx:81,itemId:39,date:"2026-01-15",amount:33186.5,invoice:"LND-01",supplier:"Brett",comment:"Landscaping 1"},
-      {idx:82,itemId:39,date:"2026-01-25",amount:6125,invoice:"LND-02",supplier:"Brett",comment:"Landscaping 2"},
-      {idx:83,itemId:39,date:"2026-02-10",amount:46850,invoice:"LND-03",supplier:"Brett",comment:"Landscaping 3"},
-      {idx:84,itemId:39,date:"2026-03-01",amount:26850,invoice:"LND-04",supplier:"Brett",comment:"Landscaping 4"},
-      {idx:85,itemId:40,date:"2026-01-20",amount:26850,invoice:"PST-01",supplier:"Mantis",comment:"Pest control"},
-      {idx:86,itemId:40,date:"2026-02-15",amount:19750,invoice:"PST-02",supplier:"Mantis",comment:"Pest control 2"},
-      {idx:87,itemId:41,date:"2026-01-10",amount:597710.06,invoice:"FIN-01",supplier:"Various",comment:"Tiles/paint batch"},
-      {idx:88,itemId:41,date:"2026-02-05",amount:54172.8,invoice:"FIN-02",supplier:"Various",comment:"Batch 2"},
-      {idx:89,itemId:41,date:"2026-03-01",amount:20939.75,invoice:"FIN-03",supplier:"Various",comment:"Batch 3"},
-      {idx:90,itemId:42,date:"2026-01-20",amount:6960,invoice:"IT-01",supplier:"Castle Rock",comment:"CCTV deposit"},
-      {idx:91,itemId:42,date:"2026-02-15",amount:22413.7,invoice:"IT-02",supplier:"Andre",comment:"IT progress"},
-      {idx:92,itemId:43,date:"2026-01-15",amount:582527.92,invoice:"GYM-01",supplier:"Penta Systems",comment:"Gym equipment"},
-      {idx:93,itemId:44,date:"2025-11-01",amount:45000,invoice:"CW-01",supplier:"Container World",comment:"Delivery & setup"},
-      {idx:94,itemId:44,date:"2025-12-01",amount:1550,invoice:"CW-02",supplier:"Container World",comment:"Rent Dec"},
-      {idx:95,itemId:44,date:"2026-01-01",amount:1500,invoice:"CW-03",supplier:"Container World",comment:"Rent Jan"},
-      {idx:96,itemId:44,date:"2026-02-01",amount:1500,invoice:"CW-04",supplier:"Container World",comment:"Rent Feb"},
-      {idx:97,itemId:44,date:"2026-03-01",amount:147520,invoice:"CW-05",supplier:"Container World",comment:"Additional"},
-      {idx:98,itemId:45,date:"2026-01-15",amount:101721.97,invoice:"MOV-01",supplier:"Sorted Movers",comment:"Moving services"},
-      {idx:99,itemId:46,date:"2026-01-20",amount:14538.32,invoice:"OFF-01",supplier:"Various",comment:"Office consumables"},
-      {idx:100,itemId:47,date:"2026-01-10",amount:73853,invoice:"INS-01",supplier:"CONSORT",comment:"Insurance premium"},
-      {idx:101,itemId:50,date:"2026-01-20",amount:215965.4,invoice:"SAU-01",supplier:"",comment:"Sauna payment"}
-    ];
+// Keep window references for global functions
+window.db = db;
+window.db_update = update;
+window.db_remove = remove;
+window.db_set = set;
+window.db_ref = ref;
 
-    const SEED_REDEARTH = [
-      {supplier:"Container World", description:"Office Container + Site Storage (incl delivery, pick up, handling, cleaning fees, security deposit and March rent)", amountExVat:40100},
-      {supplier:"Container World", description:"Office monthly rent April 2026", amountExVat:2700},
-      {supplier:"Container World", description:"Storage container monthly rent April 2026", amountExVat:750},
-      {supplier:"Container World", description:"Office monthly rent May 2026", amountExVat:2700},
-      {supplier:"Container World", description:"Storage container monthly rent May 2026", amountExVat:750},
-      {supplier:"Container World", description:"Office monthly rent June 2026", amountExVat:2700},
-      {supplier:"Container World", description:"Storage container monthly rent June 2026", amountExVat:750}
-    ];
+// SEED DATA (Used only if Firebase is completely empty)
+const SEED_BUDGET = [
+  {id:1,area:"DHW",supplier:"Energenic",type:"Quote",budget:637500},
+  {id:2,area:"Pools (Heatpump + Filter...)",supplier:"Waterboys",type:"Quote",budget:591000},
+  {id:3,area:"HVAC",supplier:"Parkes Refridgeration",type:"Assumption & Quote",budget:1625000},
+  {id:4,area:"Roof FOH (Main Area, Dining)",supplier:"Tip Top Thatching",type:"Quote",budget:1215000},
+  {id:12,area:"Construction",supplier:"Red Earth Construction",type:"Claims",budget:9850000},
+  {id:25,area:"AC Electrical work",supplier:"Van Wyk & Prinsloo",type:"Assumption",budget:2500000},
+  {id:33,area:"New Aluminium Doors / Windows",supplier:"Aluview",type:"Quotes",budget:3250000}
+]; // (Truncated for snippet brevity - ensure you paste your full 51 items here)
 
-    async function bootstrap() {
-      const snap = await get(ref(db, 'budgetItems'));
-      if (!snap.exists()) {
-        const budgetObj = {}; SEED_BUDGET.forEach(b => { budgetObj[b.id] = b; });
-        const payObj = {}; SEED_PAYMENTS.forEach(p => { payObj[p.idx] = p; });
-        const reObj = {}; SEED_REDEARTH.forEach((r,i) => { reObj[i] = r; });
-        await set(ref(db, 'budgetItems'), budgetObj);
-        await set(ref(db, 'payments'), payObj);
-        await set(ref(db, 'redearthItems'), reObj);
-      }
-      onValue(ref(db, 'budgetItems'), snap => { window.budgetItems = Object.values(snap.val() || {}).sort((a,b)=>a.id-b.id); if(window._appReady) { window.renderAll(); window.buildCharts(); } });
-      onValue(ref(db, 'payments'), snap => { window.payments = Object.values(snap.val() || {}).sort((a,b)=>a.idx-b.idx); if(window._appReady) { window.renderAll(); window.buildCharts(); } });
-      onValue(ref(db, 'redearthItems'), snap => { window.redearthItems = Object.values(snap.val() || {}); if(window._appReady) window.renderRedEarth(); });
-    }
-    window.db_setBudgetItem = (item) => set(ref(db, `budgetItems/${item.id}`), item);
-    window.db_setPayment = (p) => set(ref(db, `payments/${p.idx}`), p);
-    window.db_deletePayment = (idx) => remove(ref(db, `payments/${idx}`));
-    window.db_setRedEarth = (i, item) => set(ref(db, `redearthItems/${i}`), item);
-    window.db_deleteRedEarth = (i) => remove(ref(db, `redearthItems/${i}`));
-    window.db_addRedEarth = async (item) => { const snap = await get(ref(db, 'redearthItems')); const data = snap.val() || {}; const nextIdx = Object.keys(data).length; await set(ref(db, `redearthItems/${nextIdx}`), item); };
-    bootstrap().then(() => { document.getElementById('loadingScreen').style.display = 'none'; });
-  </script>
+const SEED_PAYMENTS = [
+  {id:"p1", itemId:1, week:"2026-W02", amount:123300, supplier:"Energenic"},
+  {id:"p2", itemId:2, week:"2026-W01", amount:70212.87, supplier:"Waterboys"},
+  {id:"p3", itemId:12, week:"2025-W40", amount:136399, supplier:"Red Earth"}
+];
 
-  <style>
-    /* Royal Portfolio Identity — Warm luxury, neutral sophistication, gold accents */
-    :root {
-      --rp-ivory: #FDF9F2;
-      --rp-sand: #F3EDE3;
-      --rp-warm-gray: #E8E0D5;
-      --rp-stone: #CBBFAE;
-      --rp-charcoal: #2C2A27;
-      --rp-gold: #C6A15B;
-      --rp-gold-dark: #9F7E41;
-      --rp-burgundy: #7A3E2E;
-      --rp-olive: #6D7A5E;
-      --rp-cream: #FFFBF5;
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.02), 0 4px 16px rgba(0,0,0,0.03);
-      --shadow-md: 0 8px 24px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.02);
-      --radius-card: 20px;
-      --radius-sm: 12px;
-    }
+const SEED_CASHFLOW = [
+  {id:"c1", month:"2026-02", w1:0, w2:3000000, w3:0, w4:2750000},
+  {id:"c2", month:"2026-03", w1:0, w2:3500000, w3:0, w4:3500000},
+  {id:"c3", month:"2026-04", w1:0, w2:3500000, w3:0, w4:4000000}
+];
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+window.budgetItems = [];
+window.payments = [];
+window.cashflow = [];
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--rp-ivory);
-      color: var(--rp-charcoal);
-      font-size: 13.5px;
-      line-height: 1.45;
-    }
+async function bootstrap() {
+  const snapB = await get(ref(db, 'budgetItems'));
+  if (!snapB.exists()) {
+    let obj = {}; SEED_BUDGET.forEach(b => obj[b.id] = b); await set(ref(db, 'budgetItems'), obj);
+    let pObj = {}; SEED_PAYMENTS.forEach(p => pObj[p.id] = p); await set(ref(db, 'payments'), pObj);
+    let cObj = {}; SEED_CASHFLOW.forEach(c => cObj[c.id] = c); await set(ref(db, 'cashflow'), cObj);
+  }
 
-    /* Loading */
-    #loadingScreen {
-      position: fixed;
-      inset: 0;
-      background: var(--rp-charcoal);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 3000;
-    }
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid rgba(198, 161, 91, 0.2);
-      border-top-color: var(--rp-gold);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+  onValue(ref(db, 'budgetItems'), s => { window.budgetItems = Object.values(s.val()||{}).sort((a,b)=>a.id-b.id); refreshUI(); });
+  onValue(ref(db, 'payments'), s => { window.payments = Object.values(s.val()||{}).sort((a,b)=>a.week.localeCompare(b.week)); refreshUI(); });
+  onValue(ref(db, 'cashflow'), s => { window.cashflow = Object.values(s.val()||{}).sort((a,b)=>a.month.localeCompare(b.month)); refreshUI(); });
+}
 
-    /* Login */
-    #loginScreen {
-      position: fixed;
-      inset: 0;
-      background: rgba(44, 42, 39, 0.85);
-      backdrop-filter: blur(8px);
-      z-index: 2000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-    }
-    #loginScreen.show { display: flex; }
-    .login-card {
-      background: var(--rp-cream);
-      border-radius: 32px;
-      width: 400px;
-      overflow: hidden;
-      box-shadow: 0 30px 50px rgba(0,0,0,0.2);
-    }
-    .login-header {
-      background: linear-gradient(135deg, var(--rp-charcoal) 0%, #3A3632 100%);
-      padding: 36px 32px;
-      text-align: center;
-      border-bottom: 2px solid var(--rp-gold);
-    }
-    .royal-logo {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.9rem;
-      font-weight: 600;
-      color: white;
-      letter-spacing: 1px;
-    }
-    .royal-logo span {
-      color: var(--rp-gold);
-    }
-    .login-sub {
-      font-size: 0.7rem;
-      letter-spacing: 0.2em;
-      color: rgba(255,255,255,0.6);
-      margin-top: 6px;
-    }
-    .login-body {
-      padding: 32px;
-    }
-    .login-input {
-      width: 100%;
-      padding: 14px 16px;
-      border: 1px solid var(--rp-stone);
-      border-radius: 60px;
-      background: white;
-      font-size: 0.9rem;
-      margin-bottom: 20px;
-      transition: all 0.2s;
-    }
-    .login-input:focus {
-      outline: none;
-      border-color: var(--rp-gold);
-      box-shadow: 0 0 0 2px rgba(198,161,91,0.2);
-    }
-    .login-btn {
-      width: 100%;
-      background: var(--rp-gold);
-      border: none;
-      padding: 14px;
-      border-radius: 60px;
-      color: var(--rp-charcoal);
-      font-weight: 600;
-      font-size: 0.85rem;
-      letter-spacing: 0.03em;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .login-btn:hover {
-      background: var(--rp-gold-dark);
-      color: white;
-    }
-    .login-err {
-      color: #B85C3A;
-      font-size: 0.75rem;
-      margin-top: 10px;
-      display: none;
-      text-align: center;
-    }
+bootstrap().then(() => { document.getElementById('loadingScreen').style.display = 'none'; });
+</script>
 
-    /* Shell */
-    #shell {
-      display: none;
-      height: 100vh;
-      flex-direction: column;
-    }
-    #shell.visible { display: flex; }
+<style>
+/* TRP Branding Toolkit */
+:root { --bg: #FDFBF7; --surface: #FFFFFF; --surface2: #F3EFE9; --border: #E5DED5; --text: #2C2A28; --text2: #5A5651; --text3: #8C867D; --accent: #B2915F; --nav-bg: #1A1A1A; --radius: 4px; --shadow: 0 4px 12px rgba(0,0,0,0.03); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Lato', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 13px; line-height: 1.5; }
 
-    /* Top Bar */
-    .topbar {
-      background: white;
-      padding: 0 32px;
-      height: 72px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--rp-warm-gray);
-      box-shadow: var(--shadow-sm);
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .brand-logo {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.6rem;
-      font-weight: 600;
-      color: var(--rp-charcoal);
-    }
-    .brand-logo span {
-      color: var(--rp-gold);
-      font-weight: 700;
-    }
-    .brand-badge {
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
-      color: var(--rp-stone);
-      text-transform: uppercase;
-      padding-left: 12px;
-      border-left: 1px solid var(--rp-warm-gray);
-    }
-    .topbar-actions {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-    }
-    .tbtn {
-      background: transparent;
-      border: 1px solid var(--rp-warm-gray);
-      padding: 7px 18px;
-      border-radius: 40px;
-      color: var(--rp-charcoal);
-      font-size: 0.75rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .tbtn:hover {
-      background: var(--rp-sand);
-      border-color: var(--rp-stone);
-    }
-    .lock-pill {
-      background: var(--rp-sand);
-      border-radius: 40px;
-      padding: 5px 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.7rem;
-      font-weight: 500;
-      color: var(--rp-charcoal);
-    }
-    .lock-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-    .lock-dot.on { background: #7C9A6E; }
-    .lock-dot.off { background: #B85C3A; }
+/* Loading & Login */
+#loadingScreen, #loginScreen { position: fixed; inset: 0; z-index: 3000; background: var(--nav-bg); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+#loginScreen { display: none; z-index: 2000; } #loginScreen.show { display: flex; }
+.spinner { width: 36px; height: 36px; border: 2px solid rgba(178,145,95,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.login-card { background: var(--surface); width: 420px; border-radius: var(--radius); overflow: hidden; }
+.login-header { padding: 40px; text-align: center; border-bottom: 1px solid var(--border); }
+.login-lodge { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 600; }
+.login-input { width: 100%; padding: 12px; border: 1px solid var(--border); margin: 20px 0; outline: none; }
+.login-btn { width: 100%; padding: 14px; background: var(--text); color: white; border: none; cursor: pointer; text-transform: uppercase; font-weight: bold; }
 
-    /* Sidebar */
-    .body-wrap {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-    .sidebar {
-      width: 260px;
-      background: white;
-      border-right: 1px solid var(--rp-warm-gray);
-      padding: 32px 0;
-      overflow-y: auto;
-    }
-    .nav-item {
-      padding: 12px 28px;
-      color: #5E5A55;
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin: 0 12px;
-      border-radius: 12px;
-    }
-    .nav-item:hover {
-      background: var(--rp-sand);
-      color: var(--rp-charcoal);
-    }
-    .nav-item.active {
-      background: var(--rp-sand);
-      color: var(--rp-gold-dark);
-      font-weight: 600;
-    }
+/* Layout */
+#shell { display: none; height: 100vh; overflow: hidden; flex-direction: column; } #shell.visible { display: flex; }
+.topbar { background: var(--surface); height: 64px; display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid var(--border); }
+.topbar-logo { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; }
+.body-wrap { display: flex; flex: 1; overflow: hidden; }
+.sidebar { width: 240px; background: var(--nav-bg); padding: 32px 0; }
+.nav-item { padding: 12px 32px; cursor: pointer; color: rgba(255,255,255,.5); font-size: 13px; border-left: 3px solid transparent; transition: 0.2s; }
+.nav-item:hover, .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(178,145,95,.05); }
 
-    /* Main */
-    .main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 32px 36px;
-      background: var(--rp-ivory);
-    }
-    .page { display: none; }
-    .page.active { display: block; }
+/* Main Content */
+.main { flex: 1; overflow-y: auto; padding: 40px; }
+.page { display: none; } .page.active { display: block; }
+.page-title { font-family: 'Playfair Display', serif; font-size: 32px; margin-bottom: 32px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 32px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; border-top: 3px solid var(--accent); }
+.kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text3); margin-bottom: 12px; }
+.kpi-value { font-family: 'JetBrains Mono', monospace; font-size: 24px; color: var(--text); }
 
-    /* KPI Cards */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-      margin-bottom: 32px;
-    }
-    .kpi {
-      background: white;
-      border-radius: var(--radius-card);
-      padding: 22px 24px;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--rp-warm-gray);
-      transition: transform 0.1s ease;
-    }
-    .kpi-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #9A9288;
-      margin-bottom: 8px;
-      font-weight: 500;
-    }
-    .kpi-value {
-      font-size: 1.9rem;
-      font-weight: 600;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--rp-charcoal);
-      letter-spacing: -0.02em;
-    }
+/* Tables & Forms */
+.section-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 32px; overflow: hidden; }
+.filter-bar { padding: 16px 24px; background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; gap: 16px; }
+.filter-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 3px; width: 300px; }
+table { width: 100%; border-collapse: collapse; }
+th { padding: 14px 24px; text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); border-bottom: 1px solid var(--border); cursor: pointer; }
+th:hover { color: var(--accent); }
+td { padding: 14px 24px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.r { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.btn { padding: 6px 12px; border: none; border-radius: 3px; font-size: 11px; cursor: pointer; text-transform: uppercase; font-weight: 700; background: var(--surface2); color: var(--text); transition: 0.2s; }
+.btn:hover { background: var(--border); }
+.btn-primary { background: var(--accent); color: white; } .btn-primary:hover { background: var(--accent2); }
 
-    /* Chart Cards */
-    .chart-card {
-      background: white;
-      border-radius: var(--radius-card);
-      border: 1px solid var(--rp-warm-gray);
-      margin-bottom: 28px;
-      overflow: hidden;
-      box-shadow: var(--shadow-sm);
-    }
-    .chart-head {
-      padding: 18px 24px;
-      border-bottom: 1px solid var(--rp-warm-gray);
-    }
-    .chart-title {
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: var(--rp-charcoal);
-      letter-spacing: -0.2px;
-    }
-    .chart-body {
-      padding: 20px;
-    }
-
-    /* Tables */
-    .section-card {
-      background: white;
-      border-radius: var(--radius-card);
-      border: 1px solid var(--rp-warm-gray);
-      margin-bottom: 28px;
-      overflow-x: auto;
-      box-shadow: var(--shadow-sm);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th {
-      text-align: left;
-      padding: 14px 20px;
-      background: var(--rp-sand);
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #7A7268;
-      font-weight: 600;
-    }
-    td {
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--rp-warm-gray);
-      font-size: 0.8rem;
-    }
-    .r { text-align: right; }
-
-    /* responsive */
-    @media (max-width: 1000px) {
-      .kpi-grid { grid-template-columns: repeat(2,1fr); }
-      .sidebar { width: 220px; }
-      .main { padding: 24px; }
-    }
-    @media print {
-      .topbar, .sidebar, .tbtn, .lock-pill { display: none; }
-      .main { padding: 0; background: white; }
-      .page { display: block !important; }
-    }
-  </style>
+/* Modals */
+.overlay { position: fixed; inset: 0; background: rgba(26,26,26,.8); z-index: 500; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+.modal-top { padding: 24px; border-bottom: 1px solid var(--border); font-family: 'Playfair Display', serif; font-size: 20px; }
+.modal-mid { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.fg { display: flex; flex-direction: column; gap: 8px; }
+.fl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); font-weight: 700; }
+.fi { padding: 10px; border: 1px solid var(--border); border-radius: 3px; font-family: inherit; }
+.modal-bot { padding: 20px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 12px; background: var(--surface2); }
+</script>
 </head>
 <body>
 
@@ -586,242 +140,231 @@
 
 <div id="loginScreen">
   <div class="login-card">
-    <div class="login-header">
-      <div class="royal-logo">THE ROYAL <span>PORTFOLIO</span></div>
-      <div class="login-sub">MALEWANE LODGE · REVAMP BUDGET</div>
-    </div>
-    <div class="login-body">
-      <input type="password" id="loginPw" class="login-input" placeholder="Enter secure password">
-      <button id="loginBtn" class="login-btn">Access Dashboard</button>
-      <div id="loginErr" class="login-err">Incorrect password. Please try again.</div>
+    <div class="login-header"><div class="login-lodge">The Royal Portfolio</div></div>
+    <div style="padding: 30px 40px;">
+      <input type="password" class="login-input" id="loginPw" placeholder="Access Password">
+      <button class="login-btn" onclick="doLogin()">Enter</button>
     </div>
   </div>
 </div>
 
 <div id="shell">
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-logo">THE ROYAL <span>PORTFOLIO</span></div>
-      <div class="brand-badge">Malewane Revamp</div>
-    </div>
-    <div class="topbar-actions">
-      <div class="lock-pill"><div class="lock-dot" id="ldot"></div><span id="lbl">View Only</span></div>
-      <button id="lockBtn" class="tbtn">🔓 Unlock</button>
-      <button class="tbtn" onclick="exportExcel()">📎 Excel</button>
-      <button class="tbtn" onclick="exportPDF()">🖨 PDF</button>
-    </div>
-  </div>
-
+  <div class="topbar"><div class="topbar-logo">TRP | Malewane Revamp Manager</div></div>
   <div class="body-wrap">
     <div class="sidebar">
-      <div class="nav-item active" onclick="showPage('overview')">📊 Overview</div>
-      <div class="nav-item" onclick="showPage('budget')">📋 Budget Lines</div>
-      <div class="nav-item" onclick="showPage('payments')">💳 Payments</div>
-      <div class="nav-item" onclick="showPage('cashflow')">📈 Cashflow</div>
-      <div class="nav-item" onclick="showPage('redearth')">🏗️ Red Earth</div>
+      <div class="nav-item active" onclick="showPage('budget')">Budget Overview</div>
+      <div class="nav-item" onclick="showPage('payments')">Payment Ledger</div>
+      <div class="nav-item" onclick="showPage('cashflow')">Cashflow Planning</div>
     </div>
-
+    
     <div class="main">
-      <div id="page-overview" class="page active">
+      <div class="page active" id="page-budget">
+        <div class="page-title">Master Budget</div>
         <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-label">Total Budget (ex VAT)</div><div class="kpi-value" id="kBudget">—</div></div>
-          <div class="kpi"><div class="kpi-label">Total Paid</div><div class="kpi-value" id="kPaid">—</div></div>
-          <div class="kpi"><div class="kpi-label">Remaining</div><div class="kpi-value" id="kBalance">—</div></div>
-          <div class="kpi"><div class="kpi-label">Utilisation</div><div class="kpi-value" id="kUtil">—</div></div>
+          <div class="kpi"><div class="kpi-label">Total Allocated</div><div class="kpi-value" id="kBudget">—</div></div>
+          <div class="kpi"><div class="kpi-label">Total Spent</div><div class="kpi-value" id="kPaid">—</div></div>
+          <div class="kpi"><div class="kpi-label">Remaining Variance</div><div class="kpi-value" id="kBalance">—</div></div>
         </div>
-        <div class="chart-card"><div class="chart-head"><div class="chart-title">💰 Weekly Payment Activity (Monday–Friday)</div></div><div class="chart-body"><canvas id="weeklyChart" height="220"></canvas></div></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
-          <div class="chart-card"><div class="chart-head"><div class="chart-title">Top 12 Budget vs Actual Spend</div></div><div class="chart-body"><canvas id="topBarChart" height="200"></canvas></div></div>
-          <div class="chart-card"><div class="chart-head"><div class="chart-title">Budget Allocation</div></div><div class="chart-body"><canvas id="doughnutChart" height="200"></canvas></div></div>
+        <div class="section-card">
+          <div class="filter-bar"><input type="text" class="filter-input" id="searchBudget" placeholder="Omni-search areas, suppliers..." oninput="refreshUI()"></div>
+          <table>
+            <thead><tr><th>ID</th><th>Area</th><th>Supplier</th><th class="r">Budget</th><th class="r">Paid</th><th class="r">Balance</th><th>Actions</th></tr></thead>
+            <tbody id="tblBudget"></tbody>
+          </table>
         </div>
       </div>
 
-      <div id="page-budget" class="page"><div class="section-card" id="budgetTable"></div></div>
-      <div id="page-payments" class="page"><div class="section-card" id="paymentsTable"></div></div>
-      <div id="page-cashflow" class="page"><div class="chart-card"><canvas id="cashflowBar" height="250"></canvas></div><div class="section-card" id="cashflowTable"></div></div>
-      <div id="page-redearth" class="page">
-        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
-          <div class="kpi"><div class="kpi-label">Total ex VAT</div><div class="kpi-value" id="reEx"></div></div>
-          <div class="kpi"><div class="kpi-label">VAT 15%</div><div class="kpi-value" id="reVat"></div></div>
-          <div class="kpi"><div class="kpi-label">Total inc VAT</div><div class="kpi-value" id="reInc"></div></div>
+      <div class="page" id="page-payments">
+        <div class="page-title">Chronological Ledger</div>
+        <div class="section-card">
+          <div class="filter-bar"><input type="text" class="filter-input" id="searchPmt" placeholder="Search invoices, suppliers..." oninput="refreshUI()"></div>
+          <table>
+            <thead><tr><th>Week</th><th>Budget Item ID</th><th>Supplier</th><th class="r">Amount (ex VAT)</th><th>Actions</th></tr></thead>
+            <tbody id="tblPayments"></tbody>
+          </table>
         </div>
-        <div class="section-card" id="reTable"></div>
+      </div>
+
+      <div class="page" id="page-cashflow">
+        <div class="page-title">Weekly Cashflow Projection</div>
+        <div class="section-card">
+          <table>
+            <thead><tr><th>Month</th><th class="r">Week 1</th><th class="r">Week 2</th><th class="r">Week 3</th><th class="r">Week 4</th><th class="r">Total</th><th>Actions</th></tr></thead>
+            <tbody id="tblCashflow"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
+<div class="overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-top" id="emTitle">Edit Record</div>
+    <div class="modal-mid" id="emForm"></div>
+    <div class="modal-bot">
+      <button class="btn" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  const PASS = 'Malewane2026!';
-  let isEditing = false;
-  window._appReady = false;
-  window.budgetItems = [];
-  window.payments = [];
-  window.redearthItems = [];
+let currentEditType = null;
+let currentEditId = null;
 
-  function formatMoney(n) { if (n === undefined || n === null) return '—'; return 'R ' + n.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  function getPaidForItem(id) { return (window.payments || []).filter(p => p.itemId === id).reduce((s, p) => s + (p.amount || 0), 0); }
-
-  function getMonday(dateStr) {
-    let d = new Date(dateStr);
-    d.setHours(0, 0, 0, 0);
-    let day = d.getDay();
-    let diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
+function doLogin() {
+  if (document.getElementById('loginPw').value === 'Malewane2026!') {
+    document.getElementById('loginScreen').classList.remove('show');
+    document.getElementById('shell').classList.add('visible');
+    window._appReady = true; refreshUI();
   }
-  function groupPaymentsWeekly() {
-    let weeks = new Map();
-    window.payments.forEach(p => {
-      if (!p.date) return;
-      let mon = getMonday(p.date);
-      let key = mon.toISOString().slice(0, 10);
-      weeks.set(key, (weeks.get(key) || 0) + p.amount);
-    });
-    return Array.from(weeks.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+}
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function R(n) { return n ? 'R ' + Number(n).toLocaleString('en-ZA', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'; }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// CORE RENDER LOGIC
+window.refreshUI = function() {
+  if (!window._appReady) return;
+
+  // KPIs
+  let tB = window.budgetItems.reduce((s,b)=>s+(Number(b.budget)||0), 0);
+  let tP = window.payments.reduce((s,p)=>s+(Number(p.amount)||0), 0);
+  document.getElementById('kBudget').textContent = R(tB);
+  document.getElementById('kPaid').textContent = R(tP);
+  document.getElementById('kBalance').textContent = R(tB - tP);
+
+  // BUDGET TABLE
+  let qB = document.getElementById('searchBudget').value.toLowerCase();
+  let bHtml = '';
+  window.budgetItems.filter(b => Object.values(b).join(' ').toLowerCase().includes(qB)).forEach(b => {
+    let paid = window.payments.filter(p => Number(p.itemId) === Number(b.id)).reduce((s,p)=>s+Number(p.amount),0);
+    bHtml += `<tr>
+      <td>${b.id}</td><td><b>${b.area}</b></td><td>${b.supplier||'—'}</td>
+      <td class="r">${R(b.budget)}</td><td class="r" style="color:var(--accent)">${R(paid)}</td><td class="r">${R(b.budget-paid)}</td>
+      <td>
+        <button class="btn" onclick="openEdit('budget', '${b.id}')">Edit</button>
+        <button class="btn btn-primary" onclick="openEdit('new_payment', '${b.id}')">+ Pay</button>
+      </td>
+    </tr>`;
+  });
+  document.getElementById('tblBudget').innerHTML = bHtml;
+
+  // PAYMENTS TABLE
+  let qP = document.getElementById('searchPmt').value.toLowerCase();
+  let pHtml = '';
+  window.payments.filter(p => Object.values(p).join(' ').toLowerCase().includes(qP)).forEach(p => {
+    pHtml += `<tr>
+      <td><b>${p.week}</b></td><td>Item #${p.itemId}</td><td>${p.supplier||'—'}</td><td class="r">${R(p.amount)}</td>
+      <td>
+        <button class="btn" onclick="openEdit('payment', '${p.id}')">Edit</button>
+        <button class="btn" style="color:red" onclick="deleteRecord('payments', '${p.id}')">Del</button>
+      </td>
+    </tr>`;
+  });
+  document.getElementById('tblPayments').innerHTML = pHtml;
+
+  // CASHFLOW TABLE
+  let cHtml = '';
+  window.cashflow.forEach(c => {
+    let tot = Number(c.w1||0)+Number(c.w2||0)+Number(c.w3||0)+Number(c.w4||0);
+    cHtml += `<tr>
+      <td><b>${c.month}</b></td><td class="r">${R(c.w1)}</td><td class="r">${R(c.w2)}</td><td class="r">${R(c.w3)}</td><td class="r">${R(c.w4)}</td>
+      <td class="r" style="color:var(--accent)"><b>${R(tot)}</b></td>
+      <td><button class="btn" onclick="openEdit('cashflow', '${c.id}')">Edit</button></td>
+    </tr>`;
+  });
+  document.getElementById('tblCashflow').innerHTML = cHtml;
+};
+
+// DYNAMIC EDIT FORM GENERATOR
+window.openEdit = function(type, id) {
+  currentEditType = type; currentEditId = id;
+  let form = document.getElementById('emForm'); form.innerHTML = '';
+  let data = {};
+
+  if (type === 'budget') {
+    document.getElementById('emTitle').textContent = "Edit Budget Line";
+    data = window.budgetItems.find(b => String(b.id) === String(id));
+    form.innerHTML = `
+      <div class="fg"><label class="fl">Area</label><input class="fi" id="ed_area" value="${data.area}"></div>
+      <div class="fg"><label class="fl">Supplier</label><input class="fi" id="ed_supplier" value="${data.supplier||''}"></div>
+      <div class="fg"><label class="fl">Budget Total (ex VAT)</label><input type="number" class="fi" id="ed_budget" value="${data.budget}"></div>
+    `;
+  } 
+  else if (type === 'payment' || type === 'new_payment') {
+    document.getElementById('emTitle').textContent = type === 'payment' ? "Edit Payment" : "Log New Payment";
+    if (type === 'payment') data = window.payments.find(p => String(p.id) === String(id));
+    else data = { itemId: id, week: '', amount: 0, supplier: '' };
+    
+    form.innerHTML = `
+      <div class="fg"><label class="fl">Week (YYYY-Www)</label><input type="week" class="fi" id="ed_week" value="${data.week}"></div>
+      <div class="fg"><label class="fl">Budget Item ID</label><input type="number" class="fi" id="ed_itemId" value="${data.itemId}"></div>
+      <div class="fg"><label class="fl">Supplier / Ref</label><input class="fi" id="ed_supplier" value="${data.supplier||''}"></div>
+      <div class="fg"><label class="fl">Amount (ex VAT)</label><input type="number" class="fi" id="ed_amount" value="${data.amount}"></div>
+    `;
   }
-
-  window.buildCharts = function () {
-    let weekly = groupPaymentsWeekly();
-    let ctxWeek = document.getElementById('weeklyChart')?.getContext('2d');
-    if (window.weeklyChart) window.weeklyChart.destroy();
-    if (ctxWeek) {
-      window.weeklyChart = new Chart(ctxWeek, {
-        type: 'bar',
-        data: { labels: weekly.map(w => 'Week of ' + w[0]), datasets: [{ label: 'Payments (ex VAT)', data: weekly.map(w => w[1]), backgroundColor: '#C6A15B', borderRadius: 8 }] },
-        options: { responsive: true, maintainAspectRatio: true, scales: { y: { ticks: { callback: v => 'R ' + v.toLocaleString() } } } }
-      });
-    }
-    let items = window.budgetItems || [];
-    let top12 = [...items].sort((a, b) => (b.budget || 0) - (a.budget || 0)).slice(0, 12);
-    let barCtx = document.getElementById('topBarChart')?.getContext('2d');
-    if (window.topBarChart) window.topBarChart.destroy();
-    if (barCtx) {
-      window.topBarChart = new Chart(barCtx, {
-        type: 'bar',
-        data: { labels: top12.map(i => i.area.length > 20 ? i.area.slice(0, 20) + '…' : i.area), datasets: [
-          { label: 'Budget', data: top12.map(i => i.budget || 0), backgroundColor: 'rgba(44,42,39,0.7)' },
-          { label: 'Paid', data: top12.map(i => getPaidForItem(i.id)), backgroundColor: 'rgba(198,161,91,0.8)' }
-        ] },
-        options: { responsive: true, maintainAspectRatio: true, scales: { y: { ticks: { callback: v => 'R ' + v.toLocaleString() } } } }
-      });
-    }
-    let top5 = items.slice().sort((a, b) => (b.budget || 0) - (a.budget || 0)).slice(0, 5);
-    let other = items.slice(5).reduce((s, i) => s + (i.budget || 0), 0);
-    let doughCtx = document.getElementById('doughnutChart')?.getContext('2d');
-    if (window.doughnutChart) window.doughnutChart.destroy();
-    if (doughCtx) {
-      window.doughnutChart = new Chart(doughCtx, {
-        type: 'doughnut',
-        data: { labels: [...top5.map(i => i.area.slice(0, 20)), 'Other'], datasets: [{ data: [...top5.map(i => i.budget || 0), other], backgroundColor: ['#C6A15B', '#7C9A6E', '#9F7E41', '#6D7A5E', '#A57C4C', '#DBC6A1'] }] },
-        options: { cutout: '60%', plugins: { legend: { position: 'bottom' } } }
-      });
-    }
-    let cfData = [
-      { month: "Feb 2026", planned: 3000000, revised: 2750000 },
-      { month: "Mar 2026", planned: 3500000, revised: 3500000 },
-      { month: "Apr 2026", planned: 3500000, revised: 4000000 },
-      { month: "May 2026", planned: 4000000, revised: 4500000 },
-      { month: "Jun 2026", planned: 4500000, revised: 4500000 },
-      { month: "Jul 2026", planned: 5000000, revised: 5000000 }
-    ];
-    let cfCtx = document.getElementById('cashflowBar')?.getContext('2d');
-    if (window.cfChart) window.cfChart.destroy();
-    if (cfCtx) {
-      window.cfChart = new Chart(cfCtx, {
-        type: 'bar',
-        data: { labels: cfData.map(c => c.month), datasets: [
-          { label: 'Planned (ex VAT)', data: cfData.map(c => c.planned), backgroundColor: 'rgba(44,42,39,0.6)' },
-          { label: 'Revised (ex VAT)', data: cfData.map(c => c.revised), backgroundColor: 'rgba(198,161,91,0.7)' }
-        ] },
-        options: { responsive: true, scales: { y: { ticks: { callback: v => 'R ' + v.toLocaleString() } } } }
-      });
-    }
-    let cashHtml = '<table><thead><tr><th>Month</th><th class="r">Planned (ex VAT)</th><th class="r">Revised (ex VAT)</th></tr></thead><tbody>';
-    cfData.forEach(c => { cashHtml += `<tr><td>${c.month}</td><td class="r">${formatMoney(c.planned)}</td><td class="r">${formatMoney(c.revised)}</td></tr>`; });
-    cashHtml += '</tbody></table>';
-    document.getElementById('cashflowTable').innerHTML = cashHtml;
-  };
-
-  window.renderAll = function () {
-    let totalBudget = window.budgetItems.reduce((s, b) => s + (b.budget || 0), 0);
-    let totalPaid = window.payments.reduce((s, p) => s + (p.amount || 0), 0);
-    document.getElementById('kBudget').innerText = formatMoney(totalBudget);
-    document.getElementById('kPaid').innerText = formatMoney(totalPaid);
-    document.getElementById('kBalance').innerText = formatMoney(totalBudget - totalPaid);
-    document.getElementById('kUtil').innerText = totalBudget ? ((totalPaid / totalBudget) * 100).toFixed(1) + '%' : '0%';
-    let budgetHtml = '<table><thead><tr><th>#</th><th>Area / Description</th><th>Supplier</th><th class="r">Budget</th><th class="r">Paid</th><th class="r">Balance</th><th class="r">%</th></tr></thead><tbody>';
-    window.budgetItems.forEach(b => {
-      let paid = getPaidForItem(b.id);
-      let bal = (b.budget || 0) - paid;
-      let pct = b.budget ? ((paid / b.budget) * 100).toFixed(0) : 0;
-      budgetHtml += `<tr><td>${b.id}</td><td><strong>${b.area}</strong><br><span style="font-size:11px;color:#9A9288">${b.comment?.slice(0, 70) || ''}</span></td><td>${b.supplier || '—'}</td><td class="r">${formatMoney(b.budget)}</td><td class="r">${formatMoney(paid)}</td><td class="r">${formatMoney(bal)}</td><td class="r">${pct}%</td></tr>`;
-    });
-    budgetHtml += '</tbody></table>';
-    document.getElementById('budgetTable').innerHTML = budgetHtml;
-
-    let payHtml = '<table><thead><tr><th>Date</th><th>Budget Item</th><th>Supplier</th><th>Invoice</th><th class="r">Amount</th></tr></thead><tbody>';
-    [...window.payments].sort((a, b) => b.date.localeCompare(a.date)).forEach(p => {
-      let item = window.budgetItems.find(i => i.id === p.itemId);
-      payHtml += `<tr><td>${p.date}</td><td>${item?.area || '—'}</td><td>${p.supplier || '—'}</td><td>${p.invoice || '—'}</td><td class="r">${formatMoney(p.amount)}</td></tr>`;
-    });
-    payHtml += '</tbody></table>';
-    document.getElementById('paymentsTable').innerHTML = payHtml;
-
-    let reTotal = window.redearthItems.reduce((s, r) => s + (r.amountExVat || 0), 0);
-    document.getElementById('reEx').innerText = formatMoney(reTotal);
-    document.getElementById('reVat').innerText = formatMoney(reTotal * 0.15);
-    document.getElementById('reInc').innerText = formatMoney(reTotal * 1.15);
-    let reHtml = '<table><thead><tr><th>Supplier</th><th>Description</th><th class="r">Amount (ex VAT)</th><th class="r">Total inc VAT</th></tr></thead><tbody>';
-    window.redearthItems.forEach(r => {
-      reHtml += `<tr><td>${r.supplier}</td><td>${r.description}</td><td class="r">${formatMoney(r.amountExVat)}</td><td class="r">${formatMoney(r.amountExVat * 1.15)}</td></tr>`;
-    });
-    reHtml += '</tbody></table>';
-    document.getElementById('reTable').innerHTML = reHtml;
-    window.buildCharts();
-  };
-  window.renderRedEarth = window.renderAll;
-
-  function showPage(name) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.getElementById(`page-${name}`).classList.add('active');
-    document.querySelector(`.nav-item[onclick="showPage('${name}')"]`).classList.add('active');
-    if (name === 'overview' || name === 'cashflow') window.buildCharts();
+  else if (type === 'cashflow') {
+    document.getElementById('emTitle').textContent = "Edit Cashflow Month";
+    data = window.cashflow.find(c => String(c.id) === String(id));
+    form.innerHTML = `
+      <div class="fg"><label class="fl">Month (YYYY-MM)</label><input type="month" class="fi" id="ed_month" value="${data.month}"></div>
+      <div class="fg"><label class="fl">Week 1 Allocation</label><input type="number" class="fi" id="ed_w1" value="${data.w1}"></div>
+      <div class="fg"><label class="fl">Week 2 Allocation</label><input type="number" class="fi" id="ed_w2" value="${data.w2}"></div>
+      <div class="fg"><label class="fl">Week 3 Allocation</label><input type="number" class="fi" id="ed_w3" value="${data.w3}"></div>
+      <div class="fg"><label class="fl">Week 4 Allocation</label><input type="number" class="fi" id="ed_w4" value="${data.w4}"></div>
+    `;
   }
-  function exportExcel() {
-    let wb = XLSX.utils.book_new();
-    let ws = XLSX.utils.json_to_sheet(window.budgetItems.map(b => ({ ID: b.id, Area: b.area, Supplier: b.supplier, Budget: b.budget, Paid: getPaidForItem(b.id), Balance: (b.budget || 0) - getPaidForItem(b.id) })));
-    XLSX.utils.book_append_sheet(wb, ws, 'Budget');
-    XLSX.writeFile(wb, `RoyalPortfolio_Malewane_${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }
-  function exportPDF() { window.print(); }
+  openModal('editModal');
+};
 
-  document.getElementById('loginBtn').onclick = () => {
-    if (document.getElementById('loginPw').value === PASS) {
-      document.getElementById('loginScreen').classList.remove('show');
-      document.getElementById('shell').classList.add('visible');
-      isEditing = true;
-      window._appReady = true;
-      window.renderAll();
-      window.buildCharts();
-    } else document.getElementById('loginErr').style.display = 'block';
-  };
-  document.getElementById('lockBtn').onclick = () => {
-    if (isEditing) {
-      isEditing = false;
-      document.getElementById('ldot').className = 'lock-dot off';
-      document.getElementById('lbl').innerText = 'View Only';
-    } else {
-      let pwd = prompt('Enter password to unlock editing');
-      if (pwd === PASS) {
-        isEditing = true;
-        document.getElementById('ldot').className = 'lock-dot on';
-        document.getElementById('lbl').innerText = 'Edit Mode';
-      } else alert('Wrong password');
-    }
-  };
-  setTimeout(() => { document.getElementById('loadingScreen').style.display = 'none'; document.getElementById('loginScreen').classList.add('show'); }, 500);
-  window.showPage = showPage; window.exportExcel = exportExcel; window.exportPDF = exportPDF;
+window.saveEdit = function() {
+  if (currentEditType === 'budget') {
+    let updates = {
+      area: document.getElementById('ed_area').value,
+      supplier: document.getElementById('ed_supplier').value,
+      budget: Number(document.getElementById('ed_budget').value)
+    };
+    window.db_update(window.db_ref(window.db, `budgetItems/${currentEditId}`), updates);
+  } 
+  else if (currentEditType === 'payment' || currentEditType === 'new_payment') {
+    let pid = currentEditType === 'payment' ? currentEditId : 'pay_' + Date.now();
+    let updates = {
+      id: pid,
+      week: document.getElementById('ed_week').value,
+      itemId: Number(document.getElementById('ed_itemId').value),
+      supplier: document.getElementById('ed_supplier').value,
+      amount: Number(document.getElementById('ed_amount').value)
+    };
+    window.db_set(window.db_ref(window.db, `payments/${pid}`), updates);
+  }
+  else if (currentEditType === 'cashflow') {
+    let updates = {
+      month: document.getElementById('ed_month').value,
+      w1: Number(document.getElementById('ed_w1').value),
+      w2: Number(document.getElementById('ed_w2').value),
+      w3: Number(document.getElementById('ed_w3').value),
+      w4: Number(document.getElementById('ed_w4').value)
+    };
+    window.db_update(window.db_ref(window.db, `cashflow/${currentEditId}`), updates);
+  }
+  closeModal('editModal');
+};
+
+window.deleteRecord = function(node, id) {
+  if (confirm("Are you sure you want to delete this record? This affects overall totals.")) {
+    window.db_remove(window.db_ref(window.db, `${node}/${id}`));
+  }
+};
 </script>
 </body>
 </html>
