@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Malewane Lodge — Revamp Budget</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, get, onValue, remove, update }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ─── Firebase config ───────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyA6PrNQXcdHp_4gKd6EyxEDt19W4Ilim0M",
+  authDomain: "rmlrevamp2026.firebaseapp.com",
+  databaseURL: "https://rmlrevamp2026-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "rmlrevamp2026",
+  storageBucket: "rmlrevamp2026.firebasestorage.app",
+  messagingSenderId: "221500385252",
+  appId: "1:221500385252:web:56409a706cfacaa94bc9f1",
+  measurementId: "G-MKLW2XXWNK"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// ─── Seed data (written once if DB is empty) ───────────────
+const SEED_BUDGET = [
+  {id:1,area:"DHW (Water Heat Tanks)",supplier:"Energenic",comment:"1x 300L Stiebel Eltron per LS; 2x per RS; (FOH, BOH, Spa) 2x300L per area. Transport included.",type:"Quote",budget:700000},
+  {id:2,area:"Pools — Heatpump, Filter, Pump & Labour",supplier:"Waterboys",comment:"Heatpumps; new pool pumps, filters, piping, pool lights and stainless spouts",type:"Quote",budget:591000},
+  {id:3,area:"HVAC — Split Unit Inverter Aircons",supplier:"Parkes Refrigeration / Baker Air",comment:"Split unit inverter aircons incl shipping, labour & fitment. 1x 36000BTU per LS; 4x 36000BTU per RS",type:"Assumption & Quote",budget:1650000},
+  {id:4,area:"Roof FOH — Main Area, Dining, Library",supplier:"Tip Top Thatching",comment:"Removal of old thatching grass. Rethatching of Main Lodge Reception, Dining Areas & Library. Sanding of all Gum Poles.",type:"Quote",budget:1215000},
+  {id:5,area:"Roof FOH — New Shop",supplier:"Tip Top Thatching",comment:"New Shop Roof — Pole Work & Thatching.",type:"Quote",budget:164500},
+  {id:6,area:"Roof BOH — Kitchen Roof",supplier:"Tip Top Thatching",comment:"Removal of all thatch & Pole Work. Chromadek Roofing. New SA Pine CCA Roof structure. Isotherm insulation.",type:"Quote",budget:650000},
+  {id:7,area:"Roofs — Removal & Travelling",supplier:"Tip Top Thatching",comment:"Removal of thatch from site plus travelling costs",type:"Quote",budget:281000},
+  {id:8,area:"Roof Suites — All LSs and RSs",supplier:"Tip Top Thatching",comment:"Removal of all old thatching grass. Rethatching of all LSs and RSs. Sanding of All Gum Poles.",type:"Quote",budget:3245000},
+  {id:9,area:"Sky Light Windows",supplier:"TSRW (Janine)",comment:"3 x extra sky light windows",type:"Quote",budget:150000},
+  {id:10,area:"Preliminaries & Generals (Ps & Gs)",supplier:"Red Earth",comment:"",type:"Claims",budget:2500000},
+  {id:11,area:"Contractor Allowance for Profit",supplier:"Red Earth",comment:"",type:"Claims",budget:1000000},
+  {id:12,area:"Construction",supplier:"Red Earth Construction",comment:"Raw building work including new bar at entrance",type:"Claims",budget:9800000},
+  {id:13,area:"Decks — All",supplier:"Tshukudu Decking",comment:"Sanding all decks. No sealing. Reinforcing substructures.",type:"Quote",budget:1750000},
+  {id:14,area:"Decking — Walkway Link",supplier:"Tshukudu Decking",comment:"Between dining and lower boma deck",type:"Assumption",budget:115000},
+  {id:15,area:"Decking — Observation Lounge Roof",supplier:"Tshukudu Decking",comment:"New deck on observation lounge roof",type:"Assumption",budget:100000},
+  {id:16,area:"BOH Kitchen Equipment — Main",supplier:"JAG",comment:"Main BOH and new coffee bar/bar equipment incl equipment, extraction, labour and fitment",type:"Assumption",budget:100000},
+  {id:17,area:"BOH Kitchen Equipment — Suites (RS1 & RS8)",supplier:"JAG / Smeg",comment:"RS1 & RS8",type:"Quotes",budget:500000},
+  {id:18,area:"Joinery & Tops",supplier:"Neetling Meubels (Alex) / Splinters",comment:"Joinery repair / Refurb",type:"Assumption",budget:705000},
+  {id:19,area:"FOH Appliances",supplier:"",comment:"Appliances for FOH kitchens in suites; Appliances for new bar in FOH at Cheethas",type:"",budget:350000},
+  {id:20,area:"Sanware",supplier:"Victoria Bathrooms",comment:"Replacement Sanware where needed",type:"Assumption",budget:320000},
+  {id:21,area:"Light Fixtures, Switchgear & Fans",supplier:"Various",comment:"Provision for light fixtures",type:"Assumption",budget:330000},
+  {id:22,area:"Plumbing Work",supplier:"",comment:"Provision for plumbing work to be done",type:"",budget:492500},
+  {id:23,area:"Water Reticulation",supplier:"",comment:"New main septic tank, calcamite tanks and sewers for all areas",type:"",budget:1100000},
+  {id:24,area:"Electrical Work",supplier:"Van Wyk & Prinsloo",comment:"Provision for electrical work. Move DB boards etc.",type:"Assumption",budget:1500000},
+  {id:25,area:"AC Electrical Work",supplier:"Van Wyk & Prinsloo",comment:"",type:"",budget:500000},
+  {id:26,area:"Fire Mainlines & Detection System",supplier:"ASP Fire",comment:"",type:"",budget:200000},
+  {id:27,area:"Fire Retardant",supplier:"Thatchsayf Limpopo",comment:"",type:"",budget:50000},
+  {id:28,area:"Flooring",supplier:"",comment:"",type:"",budget:200000},
+  {id:29,area:"Vintage Doors",supplier:"Private Collection",comment:"",type:"",budget:50000},
+  {id:30,area:"Architect Fees",supplier:"Barnabey (Architects Incorporated)",comment:"",type:"",budget:250000},
+  {id:31,area:"Engineering Fees",supplier:"Ashley van Blerk / Johan Thiart",comment:"",type:"",budget:150000},
+  {id:32,area:"QS Fees (External)",supplier:"LimCo QS (Dewald)",comment:"",type:"",budget:100000},
+  {id:33,area:"New Aluminium Doors & Windows",supplier:"Aluview",comment:"",type:"",budget:2000000},
+  {id:34,area:"Window & Door Refurb",supplier:"Unknown",comment:"",type:"",budget:100000},
+  {id:35,area:"Balustrades",supplier:"Ivan / Irvin",comment:"",type:"",budget:200000},
+  {id:36,area:"Blinds & Curtains",supplier:"Various",comment:"",type:"",budget:150000},
+  {id:37,area:"Underfloor Heating",supplier:"CFS Flooring (Bradley)",comment:"",type:"",budget:400000},
+  {id:38,area:"New Generator",supplier:"Energenic",comment:"",type:"",budget:2000000},
+  {id:39,area:"Landscaping",supplier:"Brett",comment:"",type:"",budget:300000},
+  {id:40,area:"Pest Control",supplier:"Mantis",comment:"",type:"",budget:100000},
+  {id:41,area:"Tiles, Wallpaper & Paint",supplier:"Various",comment:"",type:"",budget:700000},
+  {id:42,area:"IT & CCTV",supplier:"Castle Rock / Andre",comment:"",type:"",budget:150000},
+  {id:43,area:"Gym Equipment",supplier:"Penta Systems",comment:"",type:"",budget:600000},
+  {id:44,area:"Storage Containers",supplier:"Container World",comment:"",type:"",budget:200000},
+  {id:45,area:"Moving Company",supplier:"Sorted Movers",comment:"",type:"",budget:120000},
+  {id:46,area:"Office Consumables & Printing",supplier:"Various",comment:"",type:"",budget:30000},
+  {id:47,area:"Contractors All Risk Insurance",supplier:"CONSORT",comment:"",type:"",budget:75000},
+  {id:48,area:"Contingencies",supplier:"",comment:"",type:"",budget:500000},
+  {id:49,area:"Logistics",supplier:"",comment:"",type:"",budget:100000},
+  {id:50,area:"Sauna",supplier:"",comment:"",type:"",budget:250000},
+  {id:51,area:"Cold Plunge",supplier:"",comment:"",type:"",budget:25000}
+];
+
+const SEED_PAYMENTS = [
+  {idx:0,itemId:1,date:"2026-01-15",amount:123300,invoice:"",supplier:"Energenic",comment:"DHW Heat Tanks — deposit payment"},
+  {idx:1,itemId:1,date:"2026-02-10",amount:392350,invoice:"",supplier:"Energenic",comment:"DHW Heat Tanks — final payment"},
+  {idx:2,itemId:2,date:"2026-01-20",amount:70212.87,invoice:"",supplier:"Waterboys",comment:"Pools — initial deposit"},
+  {idx:3,itemId:2,date:"2026-02-05",amount:30091.23,invoice:"",supplier:"Waterboys",comment:"Pools — progress payment 1"},
+  {idx:4,itemId:2,date:"2026-02-18",amount:13884,invoice:"",supplier:"Waterboys",comment:"Pools — progress payment 2"},
+  {idx:5,itemId:2,date:"2026-03-01",amount:230268.91,invoice:"",supplier:"Waterboys",comment:"Pools — progress payment 3"},
+  {idx:6,itemId:2,date:"2026-03-15",amount:20658.24,invoice:"",supplier:"Waterboys",comment:"Pools — retention"},
+  {idx:7,itemId:3,date:"2026-01-10",amount:199471,invoice:"",supplier:"Parkes Refrigeration",comment:"HVAC — deposit"},
+  {idx:8,itemId:3,date:"2026-02-12",amount:3626,invoice:"",supplier:"Baker Air",comment:"HVAC — additional works"},
+  {idx:9,itemId:3,date:"2026-03-01",amount:579917.8,invoice:"",supplier:"Parkes Refrigeration",comment:"HVAC — progress payment"},
+  {idx:10,itemId:4,date:"2026-01-20",amount:607500,invoice:"",supplier:"Tip Top Thatching",comment:"Roof FOH — 50% deposit"},
+  {idx:11,itemId:5,date:"2026-01-20",amount:82250,invoice:"",supplier:"Tip Top Thatching",comment:"Roof New Shop — 50% deposit"},
+  {idx:12,itemId:6,date:"2026-01-20",amount:325000,invoice:"",supplier:"Tip Top Thatching",comment:"Roof BOH — 50% deposit"},
+  {idx:13,itemId:7,date:"2026-01-25",amount:61500,invoice:"",supplier:"Tip Top Thatching",comment:"Roof removal — deposit"},
+  {idx:14,itemId:7,date:"2026-02-15",amount:84000,invoice:"",supplier:"Tip Top Thatching",comment:"Roof removal — final"},
+  {idx:15,itemId:8,date:"2026-01-15",amount:836500,invoice:"",supplier:"Tip Top Thatching",comment:"Roof Suites — deposit"},
+  {idx:16,itemId:8,date:"2026-02-10",amount:226000,invoice:"",supplier:"Tip Top Thatching",comment:"Roof Suites — progress payment"},
+  {idx:17,itemId:8,date:"2026-03-05",amount:1034750,invoice:"",supplier:"Tip Top Thatching",comment:"Roof Suites — progress payment 2"},
+  {idx:18,itemId:9,date:"2026-01-20",amount:19368,invoice:"",supplier:"TSRW",comment:"Sky Light Windows — deposit"},
+  {idx:19,itemId:9,date:"2026-02-10",amount:18869,invoice:"",supplier:"TSRW",comment:"Sky Light Windows — progress"},
+  {idx:20,itemId:9,date:"2026-03-01",amount:1554,invoice:"",supplier:"TSRW",comment:"Sky Light Windows — final"},
+  {idx:21,itemId:10,date:"2026-09-01",amount:125000,invoice:"",supplier:"Red Earth",comment:"Ps & Gs — claim 1"},
+  {idx:22,itemId:10,date:"2026-10-01",amount:125000,invoice:"",supplier:"Red Earth",comment:"Ps & Gs — claim 2"},
+  {idx:23,itemId:10,date:"2026-11-01",amount:250000,invoice:"",supplier:"Red Earth",comment:"Ps & Gs — claim 3"},
+  {idx:24,itemId:10,date:"2026-12-01",amount:250000,invoice:"",supplier:"Red Earth",comment:"Ps & Gs — claim 4"},
+  {idx:25,itemId:10,date:"2027-01-01",amount:125000,invoice:"",supplier:"Red Earth",comment:"Ps & Gs — claim 5"},
+  {idx:26,itemId:10,date:"2027-02-01",amount:125000,invoice:"",supplier:"Red Earth",comment:"Ps & Gs — claim 6"},
+  {idx:27,itemId:11,date:"2026-09-01",amount:43938.75,invoice:"",supplier:"Red Earth",comment:"Contractor profit — claim 1"},
+  {idx:28,itemId:11,date:"2026-10-01",amount:43938.75,invoice:"",supplier:"Red Earth",comment:"Contractor profit — claim 2"},
+  {idx:29,itemId:11,date:"2026-11-01",amount:87877.49,invoice:"",supplier:"Red Earth",comment:"Contractor profit — claim 3"},
+  {idx:30,itemId:11,date:"2026-12-01",amount:43938.75,invoice:"",supplier:"Red Earth",comment:"Contractor profit — claim 4"},
+  {idx:31,itemId:11,date:"2027-01-01",amount:131816.24,invoice:"",supplier:"Red Earth",comment:"Contractor profit — claim 5"},
+  {idx:32,itemId:11,date:"2027-02-01",amount:43938.75,invoice:"",supplier:"Red Earth",comment:"Contractor profit — claim 6"},
+  {idx:33,itemId:12,date:"2026-09-01",amount:136399,invoice:"",supplier:"Red Earth Construction",comment:"Construction — claim 1"},
+  {idx:34,itemId:12,date:"2026-10-01",amount:390899.93,invoice:"",supplier:"Red Earth Construction",comment:"Construction — claim 2"},
+  {idx:35,itemId:12,date:"2026-11-01",amount:504170.13,invoice:"",supplier:"Red Earth Construction",comment:"Construction — claim 3"},
+  {idx:36,itemId:12,date:"2026-12-01",amount:388395.47,invoice:"",supplier:"Red Earth Construction",comment:"Construction — claim 4"},
+  {idx:37,itemId:12,date:"2027-01-01",amount:222241.26,invoice:"",supplier:"Red Earth Construction",comment:"Construction — claim 5"},
+  {idx:38,itemId:12,date:"2027-02-01",amount:790025.97,invoice:"",supplier:"Red Earth Construction",comment:"Construction — claim 6"},
+  {idx:39,itemId:13,date:"2026-01-10",amount:144120,invoice:"",supplier:"Tshukudu Decking",comment:"Decks — deposit"},
+  {idx:40,itemId:16,date:"2026-01-15",amount:21920,invoice:"",supplier:"JAG",comment:"BOH Kitchen Equipment — deposit"},
+  {idx:41,itemId:17,date:"2026-01-20",amount:188064.56,invoice:"",supplier:"JAG",comment:"BOH Kitchen Suites — deposit"},
+  {idx:42,itemId:17,date:"2026-02-15",amount:139417.8,invoice:"",supplier:"Smeg",comment:"BOH Kitchen Suites — appliances"},
+  {idx:43,itemId:18,date:"2026-01-15",amount:60000,invoice:"",supplier:"Neetling Meubels",comment:"Joinery — deposit"},
+  {idx:44,itemId:18,date:"2026-02-01",amount:3307.7,invoice:"",supplier:"Neetling Meubels",comment:"Joinery — additional works"},
+  {idx:45,itemId:18,date:"2026-02-15",amount:155370,invoice:"",supplier:"Splinters",comment:"Joinery — progress payment"},
+  {idx:46,itemId:20,date:"2026-01-20",amount:42206.17,invoice:"",supplier:"Victoria Bathrooms",comment:"Sanware — deposit"},
+  {idx:47,itemId:21,date:"2026-01-10",amount:31460.67,invoice:"",supplier:"Various",comment:"Light Fixtures — batch 1"},
+  {idx:48,itemId:21,date:"2026-01-25",amount:25544.32,invoice:"",supplier:"Various",comment:"Light Fixtures — batch 2"},
+  {idx:49,itemId:21,date:"2026-02-10",amount:50860,invoice:"",supplier:"Various",comment:"Light Fixtures — batch 3"},
+  {idx:50,itemId:21,date:"2026-02-20",amount:75500,invoice:"",supplier:"Various",comment:"Light Fixtures — batch 4"},
+  {idx:51,itemId:22,date:"2026-01-15",amount:176450,invoice:"",supplier:"",comment:"Plumbing Work — payment"},
+  {idx:52,itemId:23,date:"2026-01-20",amount:13079.74,invoice:"",supplier:"",comment:"Water Reticulation — deposit"},
+  {idx:53,itemId:23,date:"2026-02-10",amount:299138,invoice:"",supplier:"",comment:"Water Reticulation — progress payment"},
+  {idx:54,itemId:23,date:"2026-03-01",amount:163206.4,invoice:"",supplier:"",comment:"Water Reticulation — progress payment 2"},
+  {idx:55,itemId:24,date:"2026-01-10",amount:391468.54,invoice:"",supplier:"Van Wyk & Prinsloo",comment:"Electrical Work — deposit"},
+  {idx:56,itemId:24,date:"2026-02-10",amount:216507.5,invoice:"",supplier:"Van Wyk & Prinsloo",comment:"Electrical Work — progress payment"},
+  {idx:57,itemId:24,date:"2026-03-01",amount:44800,invoice:"",supplier:"Van Wyk & Prinsloo",comment:"Electrical Work — additional"},
+  {idx:58,itemId:25,date:"2026-01-15",amount:378735,invoice:"",supplier:"Van Wyk & Prinsloo",comment:"AC Electrical Work — payment"},
+  {idx:59,itemId:26,date:"2026-01-20",amount:8400,invoice:"",supplier:"ASP Fire",comment:"Fire System — deposit"},
+  {idx:60,itemId:28,date:"2026-01-20",amount:12963,invoice:"",supplier:"",comment:"Flooring — deposit"},
+  {idx:61,itemId:28,date:"2026-02-15",amount:25000,invoice:"",supplier:"",comment:"Flooring — progress payment"},
+  {idx:62,itemId:30,date:"2026-01-10",amount:19600,invoice:"",supplier:"Barnabey Architects",comment:"Architect Fees — retainer 1"},
+  {idx:63,itemId:30,date:"2026-02-01",amount:47600,invoice:"",supplier:"Barnabey Architects",comment:"Architect Fees — retainer 2"},
+  {idx:64,itemId:30,date:"2026-02-20",amount:27500,invoice:"",supplier:"Barnabey Architects",comment:"Architect Fees — retainer 3"},
+  {idx:65,itemId:30,date:"2026-03-01",amount:34500,invoice:"",supplier:"Barnabey Architects",comment:"Architect Fees — retainer 4"},
+  {idx:66,itemId:31,date:"2026-01-15",amount:8000,invoice:"",supplier:"Ashley van Blerk",comment:"Engineering Fees — deposit"},
+  {idx:67,itemId:31,date:"2026-02-15",amount:30000,invoice:"",supplier:"Johan Thiart",comment:"Engineering Fees — progress"},
+  {idx:68,itemId:32,date:"2026-01-20",amount:36228,invoice:"",supplier:"LimCo QS",comment:"QS Fees — deposit"},
+  {idx:69,itemId:33,date:"2025-12-01",amount:172249.63,invoice:"",supplier:"Aluview",comment:"Aluminium Doors/Windows — deposit"},
+  {idx:70,itemId:33,date:"2026-01-15",amount:224986.35,invoice:"",supplier:"Aluview",comment:"Aluminium Doors/Windows — progress 1"},
+  {idx:71,itemId:33,date:"2026-02-10",amount:556089.52,invoice:"",supplier:"Aluview",comment:"Aluminium Doors/Windows — progress 2"},
+  {idx:72,itemId:33,date:"2026-03-01",amount:53111.36,invoice:"",supplier:"Aluview",comment:"Aluminium Doors/Windows — progress 3"},
+  {idx:73,itemId:34,date:"2026-02-01",amount:58281.43,invoice:"",supplier:"Unknown",comment:"Window/Door Refurb — payment"},
+  {idx:74,itemId:35,date:"2026-01-20",amount:31299.05,invoice:"",supplier:"Ivan",comment:"Balustrades — payment 1"},
+  {idx:75,itemId:35,date:"2026-02-05",amount:28006.12,invoice:"",supplier:"Ivan",comment:"Balustrades — payment 2"},
+  {idx:76,itemId:35,date:"2026-02-20",amount:19800,invoice:"",supplier:"Ivan",comment:"Balustrades — payment 3"},
+  {idx:77,itemId:37,date:"2026-01-15",amount:93950,invoice:"",supplier:"CFS Flooring",comment:"Underfloor Heating — deposit"},
+  {idx:78,itemId:37,date:"2026-02-10",amount:165245.5,invoice:"",supplier:"CFS Flooring",comment:"Underfloor Heating — progress"},
+  {idx:79,itemId:37,date:"2026-03-01",amount:68500,invoice:"",supplier:"CFS Flooring",comment:"Underfloor Heating — progress 2"},
+  {idx:80,itemId:38,date:"2026-01-10",amount:1966966.08,invoice:"",supplier:"Energenic",comment:"New Generator — payment"},
+  {idx:81,itemId:39,date:"2026-01-15",amount:33186.5,invoice:"",supplier:"Brett",comment:"Landscaping — payment 1"},
+  {idx:82,itemId:39,date:"2026-01-25",amount:6125,invoice:"",supplier:"Brett",comment:"Landscaping — payment 2"},
+  {idx:83,itemId:39,date:"2026-02-10",amount:46850,invoice:"",supplier:"Brett",comment:"Landscaping — payment 3"},
+  {idx:84,itemId:39,date:"2026-03-01",amount:26850,invoice:"",supplier:"Brett",comment:"Landscaping — payment 4"},
+  {idx:85,itemId:40,date:"2026-01-20",amount:26850,invoice:"",supplier:"Mantis",comment:"Pest Control — payment 1"},
+  {idx:86,itemId:40,date:"2026-02-15",amount:19750,invoke:"",supplier:"Mantis",comment:"Pest Control — payment 2"},
+  {idx:87,itemId:41,date:"2026-01-10",amount:597710.06,invoice:"",supplier:"Various",comment:"Tiles/Wallpaper/Paint — batch 1"},
+  {idx:88,itemId:41,date:"2026-02-05",amount:54172.8,invoice:"",supplier:"Various",comment:"Tiles/Wallpaper/Paint — batch 2"},
+  {idx:89,itemId:41,date:"2026-03-01",amount:20939.75,invoice:"",supplier:"Various",comment:"Tiles/Wallpaper/Paint — batch 3"},
+  {idx:90,itemId:42,date:"2026-01-20",amount:6960,invoice:"",supplier:"Castle Rock",comment:"IT/CCTV — deposit"},
+  {idx:91,itemId:42,date:"2026-02-15",amount:22413.7,invoice:"",supplier:"Andre",comment:"IT/CCTV — progress"},
+  {idx:92,itemId:43,date:"2026-01-15",amount:582527.92,invoice:"",supplier:"Penta Systems",comment:"Gym Equipment — payment"},
+  {idx:93,itemId:44,date:"2025-11-01",amount:45000,invoice:"",supplier:"Container World",comment:"Storage Containers — delivery & setup"},
+  {idx:94,itemId:44,date:"2025-12-01",amount:1550,invoice:"",supplier:"Container World",comment:"Storage Containers — rent December"},
+  {idx:95,itemId:44,date:"2026-01-01",amount:1500,invoice:"",supplier:"Container World",comment:"Storage Containers — rent January"},
+  {idx:96,itemId:44,date:"2026-02-01",amount:1500,invoice:"",supplier:"Container World",comment:"Storage Containers — rent February"},
+  {idx:97,itemId:44,date:"2026-03-01",amount:147520,invoice:"",supplier:"Container World",comment:"Storage Containers — additional"},
+  {idx:98,itemId:45,date:"2026-01-15",amount:101721.97,invoice:"",supplier:"Sorted Movers",comment:"Moving Company — payment"},
+  {idx:99,itemId:46,date:"2026-01-20",amount:14538.32,invoice:"",supplier:"Various",comment:"Office Consumables — batch 1"},
+  {idx:100,itemId:47,date:"2026-01-10",amount:73853,invoice:"",supplier:"CONSORT",comment:"Contractors Insurance — premium"},
+  {idx:101,itemId:50,date:"2026-01-20",amount:215965.4,invoice:"",supplier:"",comment:"Sauna — payment"}
+];
+
+const SEED_REDEARTH = [
+  {supplier:"Container World",description:"Office Container + Site Storage (incl delivery, pick up, handling, cleaning fees, security deposit and March rent)",amountExVat:40100},
+  {supplier:"Container World",description:"Office monthly rent April 2026",amountExVat:2700},
+  {supplier:"Container World",description:"Storage container monthly rent April 2026",amountExVat:750},
+  {supplier:"Container World",description:"Office monthly rent May 2026",amountExVat:2700},
+  {supplier:"Container World",description:"Storage container monthly rent May 2026",amountExVat:750},
+  {supplier:"Container World",description:"Office monthly rent June 2026",amountExVat:2700},
+  {supplier:"Container World",description:"Storage container monthly rent June 2026",amountExVat:750}
+];
+
+// ─── In-memory state (kept in sync with Firebase) ──────────
+window._db = db;
+window.budgetItems = [];
+window.payments    = [];
+window.redearthItems = [];
+
+// ─── Bootstrap: seed if empty, then listen ─────────────────
+async function bootstrap() {
+  // Check if budgetItems exists in DB
+  const snap = await get(ref(db, 'budgetItems'));
+  if (!snap.exists()) {
+    // First run — write seed data
+    const budgetObj = {};
+    SEED_BUDGET.forEach(b => { budgetObj[b.id] = b; });
+    await set(ref(db, 'budgetItems'), budgetObj);
+
+    const payObj = {};
+    SEED_PAYMENTS.forEach(p => { payObj[p.idx] = p; });
+    await set(ref(db, 'payments'), payObj);
+
+    const reObj = {};
+    SEED_REDEARTH.forEach((r, i) => { reObj[i] = r; });
+    await set(ref(db, 'redearthItems'), reObj);
+  }
+
+  // ── Live listeners ──────────────────────────────────────
+  onValue(ref(db, 'budgetItems'), snap => {
+    const data = snap.val() || {};
+    window.budgetItems = Object.values(data).sort((a,b)=>a.id-b.id);
+    if (window._appReady) { window.renderAll(); window.buildCharts(); }
+  });
+
+  onValue(ref(db, 'payments'), snap => {
+    const data = snap.val() || {};
+    window.payments = Object.values(data).sort((a,b)=>a.idx-b.idx);
+    if (window._appReady) { window.renderAll(); window.buildCharts(); }
+  });
+
+  onValue(ref(db, 'redearthItems'), snap => {
+    const data = snap.val() || {};
+    window.redearthItems = Object.values(data);
+    if (window._appReady) window.renderRedEarth();
+  });
+}
+
+// ─── DB write helpers exposed to global scope ───────────────
+window.db_setBudgetItem = (item) =>
+  set(ref(db, `budgetItems/${item.id}`), item);
+
+window.db_setPayment = (p) =>
+  set(ref(db, `payments/${p.idx}`), p);
+
+window.db_deletePayment = (idx) =>
+  remove(ref(db, `payments/${idx}`));
+
+window.db_setRedEarth = (i, item) =>
+  set(ref(db, `redearthItems/${i}`), item);
+
+window.db_deleteRedEarth = (i) =>
+  remove(ref(db, `redearthItems/${i}`));
+
+window.db_addRedEarth = async (item) => {
+  const snap = await get(ref(db, 'redearthItems'));
+  const data = snap.val() || {};
+  const nextIdx = Object.keys(data).length;
+  await set(ref(db, `redearthItems/${nextIdx}`), item);
+};
+
+bootstrap().then(() => {
+  // Hide loading spinner once listeners are wired
+  document.getElementById('loadingScreen').style.display = 'none';
+  // If already logged in (shouldn't happen on first load, but safety)
+});
+</script>
+<style>
+:root{
+  --bg:#F8F5F0;--surface:#FFFFFF;--surface2:#F2EDE6;
+  --border:#E2D9CF;--border2:#C9BDB0;
+  --text:#1A1714;--text2:#5C534A;--text3:#9C8E82;
+  --accent:#8B4513;--accent2:#A0522D;
+  --gold:#B8860B;--green:#2D6A4F;--green2:#40916C;
+  --red:#9B2226;--red2:#AE2012;--blue:#1B4F72;
+  --nav-bg:#1A1714;
+  --shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);
+  --shadow-lg:0 4px 24px rgba(0,0,0,0.1),0 1px 4px rgba(0,0,0,0.06);
+  --radius:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;line-height:1.5;}
+
+/* LOADING */
+#loadingScreen{
+  position:fixed;inset:0;z-index:3000;background:var(--nav-bg);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;
+}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,0.1);border-top-color:var(--accent2);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{color:rgba(255,255,255,0.4);font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;}
+
+/* LOGIN */
+#loginScreen{
+  position:fixed;inset:0;z-index:2000;background:var(--nav-bg);
+  display:none;align-items:center;justify-content:center;
+  background-image:radial-gradient(circle at 30% 50%,rgba(139,69,19,.15) 0%,transparent 60%),
+                   radial-gradient(circle at 70% 20%,rgba(184,134,11,.08) 0%,transparent 50%);
+}
+#loginScreen.show{display:flex;}
+.login-card{background:var(--surface);width:400px;max-width:90vw;border-radius:8px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.4);}
+.login-header{background:linear-gradient(135deg,#8B4513 0%,#6B2F0A 100%);padding:36px 40px 32px;text-align:center;}
+.login-lodge{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:600;color:white;letter-spacing:.08em;}
+.login-subtitle{font-size:.65rem;letter-spacing:.25em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-top:4px;}
+.login-body{padding:36px 40px;}
+.login-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.15em;color:var(--text3);font-weight:600;display:block;margin-bottom:8px;}
+.login-input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:5px;font-family:'Inter',sans-serif;font-size:.9rem;background:var(--bg);color:var(--text);outline:none;transition:border-color .2s;margin-bottom:16px;}
+.login-input:focus{border-color:var(--accent);}
+.login-btn{width:100%;padding:12px;background:var(--accent);color:white;border:none;border-radius:5px;font-family:'Inter',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.06em;cursor:pointer;transition:background .2s;}
+.login-btn:hover{background:var(--accent2);}
+.login-err{color:var(--red);font-size:.78rem;margin-top:10px;display:none;text-align:center;}
+
+/* SHELL */
+#shell{display:none;height:100vh;overflow:hidden;flex-direction:column;}
+#shell.visible{display:flex;}
+
+/* TOPBAR */
+.topbar{background:var(--nav-bg);height:56px;display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.06);}
+.topbar-brand{display:flex;align-items:center;gap:12px;flex:1;}
+.topbar-logo{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:600;color:white;letter-spacing:.06em;}
+.topbar-divider{width:1px;height:20px;background:rgba(255,255,255,.15);}
+.topbar-title{font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.4);}
+.topbar-actions{display:flex;align-items:center;gap:8px;}
+.tbtn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:4px;font-family:'Inter',sans-serif;font-size:.73rem;font-weight:500;letter-spacing:.04em;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;}
+.tbtn-outline{background:transparent;color:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.18);}
+.tbtn-outline:hover{background:rgba(255,255,255,.08);color:white;}
+.tbtn-muted{background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);}
+.tbtn-muted:hover{background:rgba(255,255,255,.14);}
+.lock-pill{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 12px;font-size:.68rem;font-weight:500;color:rgba(255,255,255,.5);letter-spacing:.08em;}
+.lock-dot{width:6px;height:6px;border-radius:50%;}
+.lock-dot.on{background:#52B788;}
+.lock-dot.off{background:#E07848;}
+
+/* BODY */
+.body-wrap{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:220px;flex-shrink:0;background:var(--nav-bg);border-right:1px solid rgba(255,255,255,.06);padding:20px 0;overflow-y:auto;display:flex;flex-direction:column;}
+.nav-section-label{font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.25);padding:16px 20px 6px;font-weight:600;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;color:rgba(255,255,255,.5);font-size:.82rem;font-weight:400;transition:all .15s;border-left:2px solid transparent;}
+.nav-item:hover{color:rgba(255,255,255,.85);background:rgba(255,255,255,.04);}
+.nav-item.active{color:white;border-left-color:var(--accent2);background:rgba(139,69,19,.15);}
+.nav-icon{font-size:.95rem;width:18px;text-align:center;}
+.nav-spacer{flex:1;}
+.nav-version{padding:16px 20px;font-size:.65rem;color:rgba(255,255,255,.2);letter-spacing:.1em;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#52B788;display:inline-block;margin-left:auto;}
+.sync-dot.syncing{background:#E07848;animation:pulse .8s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;background:var(--bg);}
+.page{display:none;padding:28px 28px 48px;}
+.page.active{display:block;}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:600;color:var(--text);line-height:1.1;}
+.page-sub{font-size:.75rem;color:var(--text3);margin-top:4px;letter-spacing:.04em;}
+.page-header-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-color,var(--accent));}
+.kpi-label{font-size:.66rem;text-transform:uppercase;letter-spacing:.18em;color:var(--text3);font-weight:600;margin-bottom:10px;}
+.kpi-value{font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:500;color:var(--text);line-height:1;}
+.kpi-sub{font-size:.72rem;color:var(--text3);margin-top:6px;}
+.kpi-sub b{color:var(--kpi-color,var(--accent));}
+.kpi-icon{position:absolute;right:18px;top:18px;font-size:1.4rem;opacity:.12;}
+
+/* CARDS */
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden;box-shadow:var(--shadow);}
+.section-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);}
+.section-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.16em;color:var(--text3);font-weight:600;}
+
+/* FILTER */
+.filter-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 20px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.filter-label{font-size:.66rem;text-transform:uppercase;letter-spacing:.15em;color:var(--text3);font-weight:600;white-space:nowrap;}
+.filter-input{padding:7px 12px;border:1.5px solid var(--border);border-radius:4px;font-family:'Inter',sans-serif;font-size:.82rem;color:var(--text);background:var(--surface);outline:none;transition:border-color .15s;}
+.filter-input:focus{border-color:var(--accent);}
+.filter-sep{width:1px;height:24px;background:var(--border2);}
+.filter-search{flex:1;min-width:180px;}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:4px;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:500;letter-spacing:.04em;cursor:pointer;border:none;transition:all .15s;}
+.btn-primary{background:var(--accent);color:white;}
+.btn-primary:hover{background:var(--accent2);}
+.btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.btn-secondary:hover{background:var(--border);color:var(--text);}
+.btn-success{background:var(--green);color:white;}
+.btn-success:hover{background:var(--green2);}
+.btn-danger{background:transparent;color:var(--red2);border:1px solid rgba(155,34,38,.25);}
+.btn-danger:hover{background:rgba(155,34,38,.08);}
+.btn-sm{padding:5px 10px;font-size:.7rem;}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--surface2);border-bottom:2px solid var(--border);}
+th{padding:10px 14px;text-align:left;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:var(--text3);white-space:nowrap;}
+th.r{text-align:right;}
+td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+td.r{text-align:right;font-family:'JetBrains Mono',monospace;font-size:.82rem;}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:rgba(139,69,19,.03);}
+.tfoot-row td{background:var(--nav-bg);color:white;font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:500;border-bottom:none;padding:12px 14px;}
+.tfoot-row td.label{font-family:'Inter',sans-serif;font-size:.66rem;text-transform:uppercase;letter-spacing:.14em;color:rgba(255,255,255,.4);}
+
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:.63rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;}
+.badge-green{background:rgba(45,106,79,.1);color:var(--green);}
+.badge-red{background:rgba(155,34,38,.1);color:var(--red);}
+.badge-gold{background:rgba(184,134,11,.1);color:var(--gold);}
+.badge-muted{background:var(--surface2);color:var(--text3);}
+.badge-blue{background:rgba(27,79,114,.1);color:var(--blue);}
+
+/* PROGRESS */
+.prog-wrap{display:flex;align-items:center;gap:8px;}
+.prog-bar{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;flex:1;min-width:60px;}
+.prog-fill{height:100%;border-radius:3px;transition:width .4s;}
+.prog-pct{font-size:.68rem;color:var(--text3);font-family:'JetBrains Mono',monospace;min-width:30px;}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+.charts-grid-3{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:20px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);}
+.chart-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.chart-title{font-size:.75rem;font-weight:600;color:var(--text);}
+.chart-sub{font-size:.66rem;color:var(--text3);margin-top:2px;}
+.chart-body{padding:20px;}
+.chart-body canvas{max-height:280px;}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(26,23,20,.65);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:8px;width:100%;max-width:540px;box-shadow:var(--shadow-lg);overflow:hidden;animation:mIn .2s ease;}
+@keyframes mIn{from{transform:translateY(-12px) scale(.98);opacity:0;}to{transform:none;opacity:1;}}
+.modal-top{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:600;}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text3);font-size:1.2rem;padding:4px;border-radius:3px;line-height:1;}
+.modal-close:hover{color:var(--text);background:var(--surface2);}
+.modal-mid{padding:24px;}
+.modal-bot{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+.context-chip{font-size:.75rem;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:4px;color:var(--text2);margin-bottom:18px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg{margin-bottom:16px;}
+.fg:last-child{margin-bottom:0;}
+.fl{display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.13em;color:var(--text3);font-weight:600;margin-bottom:6px;}
+.fi{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:4px;font-family:'Inter',sans-serif;font-size:.88rem;background:var(--bg);color:var(--text);outline:none;transition:border-color .15s;}
+.fi:focus{border-color:var(--accent);}
+textarea.fi{resize:vertical;min-height:68px;}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;z-index:9999;background:var(--nav-bg);color:white;padding:11px 20px;border-radius:5px;font-size:.8rem;border-left:3px solid var(--green2);transform:translateY(60px);opacity:0;transition:all .28s;pointer-events:none;box-shadow:var(--shadow-lg);}
+#toast.show{transform:none;opacity:1;}
+#toast.err{border-left-color:var(--red2);}
+
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr);}.charts-grid,.charts-grid-3{grid-template-columns:1fr;}.sidebar{display:none;}}
+@media print{.topbar,.sidebar,#toast,.modal,.overlay,.tbtn,.btn,th:last-child,td:last-child{display:none!important;}.main{overflow:visible;}.page.active{display:block!important;}body{background:white;}.section-card,.kpi,.chart-card{box-shadow:none;border:1px solid #ddd;}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Connecting to database…</div>
+</div>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-lodge">Malewane Lodge</div>
+      <div class="login-subtitle">Revamp Project — Budget Management</div>
+    </div>
+    <div class="login-body">
+      <label class="login-label">Password</label>
+      <input type="password" class="login-input" id="loginPw" placeholder="Enter access password" autocomplete="off">
+      <button class="login-btn" id="loginBtn">Access Dashboard</button>
+      <div class="login-err" id="loginErr">Incorrect password. Please try again.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SHELL -->
+<div id="shell">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">Malewane</div>
+      <div class="topbar-divider"></div>
+      <div class="topbar-title">Revamp Budget Tracker</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="lock-pill">
+        <div class="lock-dot" id="ldot"></div>
+        <span id="lbl">Edit Mode</span>
+        <span class="sync-dot" id="syncDot" title="Live sync active"></span>
+      </div>
+      <button class="tbtn tbtn-outline" id="lockBtn">🔒 Lock</button>
+      <button class="tbtn tbtn-muted" onclick="exportExcel()">⬇ Excel</button>
+      <button class="tbtn tbtn-muted" onclick="exportPDF()">⬇ PDF</button>
+    </div>
+  </div>
+
+  <div class="body-wrap">
+    <div class="sidebar">
+      <div class="nav-section-label">Navigation</div>
+      <div class="nav-item active" id="nav-overview" onclick="showPage('overview')"><span class="nav-icon">📊</span>Overview</div>
+      <div class="nav-item" id="nav-budget" onclick="showPage('budget')"><span class="nav-icon">📋</span>Budget Lines</div>
+      <div class="nav-item" id="nav-payments" onclick="showPage('payments')"><span class="nav-icon">💳</span>Payments</div>
+      <div class="nav-item" id="nav-cashflow" onclick="showPage('cashflow')"><span class="nav-icon">📈</span>Cashflow</div>
+      <div class="nav-item" id="nav-redearth" onclick="showPage('redearth')"><span class="nav-icon">🏗️</span>Red Earth</div>
+      <div class="nav-spacer"></div>
+      <div class="nav-version">RML Revamp · Firebase Live</div>
+    </div>
+
+    <div class="main">
+
+      <!-- OVERVIEW -->
+      <div class="page active" id="page-overview">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Project Overview</div>
+            <div class="page-sub">TRP Capital Revamp — Budget vs Actuals · ZAR ex VAT</div>
+          </div>
+          <div class="page-header-actions">
+            <span class="filter-label">Period</span>
+            <input type="date" class="filter-input" id="ovFrom" onchange="renderAll()">
+            <span class="filter-label" style="margin:0 4px;">to</span>
+            <input type="date" class="filter-input" id="ovTo" onchange="renderAll()">
+            <button class="btn btn-secondary btn-sm" onclick="clearOvDates()">Clear</button>
+          </div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi" style="--kpi-color:var(--accent)"><div class="kpi-icon">🏦</div><div class="kpi-label">Total Budget (ex VAT)</div><div class="kpi-value" id="kBudget">—</div><div class="kpi-sub"><b id="kItems">0</b> line items</div></div>
+          <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-icon">✅</div><div class="kpi-label">Total Paid to Date</div><div class="kpi-value" id="kPaid">—</div><div class="kpi-sub"><b id="kPaidPct">0%</b> of budget utilised</div></div>
+          <div class="kpi" style="--kpi-color:var(--gold)"><div class="kpi-icon">⚖️</div><div class="kpi-label">Remaining Balance</div><div class="kpi-value" id="kBalance">—</div><div class="kpi-sub">Outstanding commitment</div></div>
+          <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-icon">📄</div><div class="kpi-label">Payments (Period)</div><div class="kpi-value" id="kPmtCount">—</div><div class="kpi-sub">Total: <b id="kPmtAmt">—</b></div></div>
+        </div>
+        <div class="charts-grid-3">
+          <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Budget Utilisation by Category</div><div class="chart-sub">Budget vs Paid — top 15 items</div></div></div><div class="chart-body"><canvas id="chartBudgetBar"></canvas></div></div>
+          <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Budget Breakdown</div><div class="chart-sub">Allocation by item (top 10)</div></div></div><div class="chart-body"><canvas id="chartDoughnut"></canvas></div></div>
+        </div>
+        <div class="charts-grid">
+          <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Monthly Payment Activity</div><div class="chart-sub">Payments made per month (ZAR ex VAT)</div></div></div><div class="chart-body"><canvas id="chartMonthly"></canvas></div></div>
+          <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Cashflow Forecast</div><div class="chart-sub">Planned vs Revised (incl VAT)</div></div></div><div class="chart-body"><canvas id="chartCashflow"></canvas></div></div>
+        </div>
+        <div class="section-card">
+          <div class="section-head"><div class="section-label">Top Suppliers by Spend</div></div>
+          <div class="tbl-wrap"><table><thead><tr><th>Supplier</th><th class="r">Total Paid (ex VAT)</th><th class="r">Payments</th><th>% of Total Spend</th></tr></thead><tbody id="suppliersBody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- BUDGET LINES -->
+      <div class="page" id="page-budget">
+        <div class="page-header">
+          <div><div class="page-title">Budget Lines</div><div class="page-sub">All budget line items — adjust budgets or add payments per line</div></div>
+          <div class="page-header-actions"><button class="btn btn-primary" id="addItemBtn" onclick="openAddItem()">+ Add Line Item</button></div>
+        </div>
+        <div class="section-card">
+          <div class="filter-bar">
+            <span class="filter-label">Search</span>
+            <input type="text" class="filter-input filter-search" id="budgetSearch" placeholder="Item, supplier, type…" oninput="renderBudget()">
+            <div class="filter-sep"></div>
+            <span class="filter-label">Status</span>
+            <select class="filter-input" id="budgetStatus" onchange="renderBudget()">
+              <option value="">All</option>
+              <option value="not-started">Not Started</option>
+              <option value="in-progress">In Progress</option>
+              <option value="paid">Fully Paid</option>
+              <option value="over">Over Budget</option>
+            </select>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Area / Description</th><th>Supplier</th><th>Type</th><th class="r">Budget (ex VAT)</th><th class="r">Paid</th><th class="r">Balance</th><th>Utilisation</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="budgetBody"></tbody>
+              <tfoot id="budgetFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAYMENTS -->
+      <div class="page" id="page-payments">
+        <div class="page-header">
+          <div><div class="page-title">Payment Ledger</div><div class="page-sub">All payments — filter by date range to extract period reports</div></div>
+        </div>
+        <div class="section-card">
+          <div class="filter-bar">
+            <span class="filter-label">From</span>
+            <input type="date" class="filter-input" id="pmtFrom" onchange="renderPayments()">
+            <span class="filter-label">To</span>
+            <input type="date" class="filter-input" id="pmtTo" onchange="renderPayments()">
+            <div class="filter-sep"></div>
+            <input type="text" class="filter-input filter-search" id="pmtSearch" placeholder="Supplier, invoice, description…" oninput="renderPayments()">
+            <button class="btn btn-secondary btn-sm" onclick="clearPmtFilters()">Clear</button>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Budget Item</th><th>Supplier</th><th>Invoice #</th><th>Description / Comment</th><th class="r">Amount (ex VAT)</th><th>Actions</th></tr></thead>
+              <tbody id="pmtBody"></tbody>
+              <tfoot id="pmtFoot"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CASHFLOW -->
+      <div class="page" id="page-cashflow">
+        <div class="page-header">
+          <div><div class="page-title">Cashflow Forecast</div><div class="page-sub">Monthly planned vs revised — amounts inclusive of VAT</div></div>
+        </div>
+        <div class="charts-grid" style="margin-bottom:20px;">
+          <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Planned vs Revised by Month</div></div></div><div class="chart-body"><canvas id="chartCfBar"></canvas></div></div>
+          <div class="chart-card"><div class="chart-head"><div><div class="chart-title">Cumulative Cashflow</div></div></div><div class="chart-body"><canvas id="chartCfLine"></canvas></div></div>
+        </div>
+        <div class="section-card">
+          <div class="section-head"><div class="section-label">Monthly Breakdown</div></div>
+          <div class="tbl-wrap"><table><thead><tr><th>Month</th><th class="r">Planned (Week 2)</th><th class="r">Revised (Week 4)</th><th class="r">Variance</th><th>Variance %</th></tr></thead><tbody id="cfBody"></tbody><tfoot id="cfFoot"></tfoot></table></div>
+        </div>
+      </div>
+
+      <!-- RED EARTH -->
+      <div class="page" id="page-redearth">
+        <div class="page-header">
+          <div><div class="page-title">Red Earth Deductions</div><div class="page-sub">Amounts to be deducted from Red Earth — includes VAT at 15%</div></div>
+          <div class="page-header-actions"><button class="btn btn-primary" id="addReBtn" onclick="openAddRE()">+ Add Item</button></div>
+        </div>
+        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+          <div class="kpi" style="--kpi-color:var(--accent)"><div class="kpi-label">Total (ex VAT)</div><div class="kpi-value" id="reKpiEx">—</div></div>
+          <div class="kpi" style="--kpi-color:var(--gold)"><div class="kpi-label">VAT (15%)</div><div class="kpi-value" id="reKpiVat">—</div></div>
+          <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label">Total (incl VAT)</div><div class="kpi-value" id="reKpiInc">—</div></div>
+        </div>
+        <div class="section-card">
+          <div class="tbl-wrap"><table><thead><tr><th>Supplier</th><th>Description</th><th class="r">Amount (ex VAT)</th><th class="r">VAT (15%)</th><th class="r">Total (incl VAT)</th><th>Actions</th></tr></thead><tbody id="reBody"></tbody><tfoot id="reFoot"></tfoot></table></div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /body-wrap -->
+</div><!-- /shell -->
+
+<!-- MODALS -->
+<div class="overlay" id="modPay">
+  <div class="modal">
+    <div class="modal-top"><div class="modal-title">Record Payment</div><button class="modal-close" onclick="closeModal('modPay')">✕</button></div>
+    <div class="modal-mid">
+      <div class="context-chip" id="payCtx"></div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Payment Date *</label><input type="date" class="fi" id="payDate"></div>
+        <div class="fg"><label class="fl">Amount (ex VAT) *</label><input type="number" class="fi" id="payAmt" placeholder="0.00" step="0.01"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Invoice Number *</label><input type="text" class="fi" id="payInv" placeholder="INV-001"></div>
+        <div class="fg"><label class="fl">Supplier</label><input type="text" class="fi" id="paySupp"></div>
+      </div>
+      <div class="fg"><label class="fl">Description / Comment *</label><textarea class="fi" id="payCmt" placeholder="What was this payment for? Include relevant details…"></textarea></div>
+    </div>
+    <div class="modal-bot"><button class="btn btn-secondary" onclick="closeModal('modPay')">Cancel</button><button class="btn btn-success" onclick="savePay()">Save Payment</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="modEditPay">
+  <div class="modal">
+    <div class="modal-top"><div class="modal-title">Edit Payment</div><button class="modal-close" onclick="closeModal('modEditPay')">✕</button></div>
+    <div class="modal-mid">
+      <div class="form-row">
+        <div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="epDate"></div>
+        <div class="fg"><label class="fl">Amount (ex VAT)</label><input type="number" class="fi" id="epAmt" step="0.01"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Invoice Number</label><input type="text" class="fi" id="epInv"></div>
+        <div class="fg"><label class="fl">Supplier</label><input type="text" class="fi" id="epSupp"></div>
+      </div>
+      <div class="fg"><label class="fl">Description / Comment</label><textarea class="fi" id="epCmt"></textarea></div>
+    </div>
+    <div class="modal-bot"><button class="btn btn-secondary" onclick="closeModal('modEditPay')">Cancel</button><button class="btn btn-primary" onclick="saveEditPay()">Save Changes</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="modBudget">
+  <div class="modal">
+    <div class="modal-top"><div class="modal-title">Edit Budget Line</div><button class="modal-close" onclick="closeModal('modBudget')">✕</button></div>
+    <div class="modal-mid">
+      <div class="context-chip" id="budgetCtx"></div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Budget Amount (ex VAT)</label><input type="number" class="fi" id="ebAmt" step="0.01"></div>
+        <div class="fg"><label class="fl">Supplier</label><input type="text" class="fi" id="ebSupp"></div>
+      </div>
+      <div class="fg"><label class="fl">Comment / Notes</label><textarea class="fi" id="ebCmt"></textarea></div>
+      <div class="fg"><label class="fl">Reason for Adjustment</label><input type="text" class="fi" id="ebReason" placeholder="e.g. Scope change, revised quote, price increase…"></div>
+    </div>
+    <div class="modal-bot"><button class="btn btn-secondary" onclick="closeModal('modBudget')">Cancel</button><button class="btn btn-primary" onclick="saveBudgetEdit()">Save Changes</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="modAddItem">
+  <div class="modal">
+    <div class="modal-top"><div class="modal-title">Add Budget Line Item</div><button class="modal-close" onclick="closeModal('modAddItem')">✕</button></div>
+    <div class="modal-mid">
+      <div class="form-row">
+        <div class="fg"><label class="fl">Area / Description *</label><input type="text" class="fi" id="aiArea" placeholder="e.g. New Generator"></div>
+        <div class="fg"><label class="fl">Supplier</label><input type="text" class="fi" id="aiSupp"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Budget Amount (ex VAT) *</label><input type="number" class="fi" id="aiAmt" step="0.01"></div>
+        <div class="fg"><label class="fl">Type</label><input type="text" class="fi" id="aiType" placeholder="Quote / Assumption / Claims"></div>
+      </div>
+      <div class="fg"><label class="fl">Comment / Notes</label><textarea class="fi" id="aiCmt"></textarea></div>
+    </div>
+    <div class="modal-bot"><button class="btn btn-secondary" onclick="closeModal('modAddItem')">Cancel</button><button class="btn btn-success" onclick="saveAddItem()">Add Item</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="modAddRE">
+  <div class="modal">
+    <div class="modal-top"><div class="modal-title">Add Red Earth Deduction</div><button class="modal-close" onclick="closeModal('modAddRE')">✕</button></div>
+    <div class="modal-mid">
+      <div class="fg"><label class="fl">Supplier *</label><input type="text" class="fi" id="reSupp"></div>
+      <div class="fg"><label class="fl">Description *</label><textarea class="fi" id="reDesc"></textarea></div>
+      <div class="fg"><label class="fl">Amount (ex VAT) *</label><input type="number" class="fi" id="reAmt" step="0.01"></div>
+    </div>
+    <div class="modal-bot"><button class="btn btn-secondary" onclick="closeModal('modAddRE')">Cancel</button><button class="btn btn-success" onclick="saveAddRE()">Add Item</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="modPw">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-top"><div class="modal-title">Unlock Editing</div><button class="modal-close" onclick="closeModal('modPw')">✕</button></div>
+    <div class="modal-mid">
+      <div class="fg"><label class="fl">Password</label><input type="password" class="fi" id="pwIn" placeholder="Enter password"></div>
+      <div style="color:var(--red2);font-size:.75rem;display:none;" id="pwErr">Incorrect password.</div>
+    </div>
+    <div class="modal-bot"><button class="btn btn-secondary" onclick="closeModal('modPw')">Cancel</button><button class="btn btn-primary" onclick="verifyPw()">Unlock</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// APP LOGIC  (non-module script — runs after Firebase module above)
+// ═══════════════════════════════════════════════════════════════
+var PASS = 'Malewane2026!';
+var isEditing = false;
+var currentPayItemId = null;
+var currentEditPayIdx = null;
+var currentEditItemId = null;
+var charts = {};
+window._appReady = false;
+
+const cashflowData = [
+  {month:"Sep 2025",planned:null,revised:1200000},
+  {month:"Oct 2025",planned:null,revised:1200000},
+  {month:"Nov 2025",planned:null,revised:1200000},
+  {month:"Dec 2025",planned:null,revised:1200000},
+  {month:"Jan 2026",planned:null,revised:1200000},
+  {month:"Feb 2026",planned:3000000,revised:2750000},
+  {month:"Mar 2026",planned:3500000,revised:3500000},
+  {month:"Apr 2026",planned:3500000,revised:4000000},
+  {month:"May 2026",planned:4000000,revised:4500000},
+  {month:"Jun 2026",planned:4500000,revised:4500000},
+  {month:"Jul 2026",planned:5000000,revised:5000000},
+];
+
+// ── DOM ready wiring ────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var pwEl  = document.getElementById('loginPw');
+  var btnEl = document.getElementById('loginBtn');
+  var lkBtn = document.getElementById('lockBtn');
+  if (pwEl)  pwEl.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+  if (btnEl) btnEl.addEventListener('click', doLogin);
+  if (lkBtn) lkBtn.addEventListener('click', toggleLock);
+
+  document.querySelectorAll('.overlay').forEach(function(o){
+    o.addEventListener('click', function(e){ if(e.target===o) o.classList.remove('open'); });
+  });
+
+  // After Firebase bootstrap, show login screen
+  // Poll until Firebase module has run bootstrap (sets _db)
+  var poll = setInterval(function(){
+    if (window._db) {
+      clearInterval(poll);
+      // Give listeners a moment to fire initial data
+      setTimeout(function(){
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('loginScreen').classList.add('show');
+      }, 800);
+    }
+  }, 100);
+});
+
+// ── AUTH ─────────────────────────────────────────────────────
+function doLogin() {
+  var pwEl  = document.getElementById('loginPw');
+  var errEl = document.getElementById('loginErr');
+  var pw = pwEl.value.trim();
+  if (pw === PASS) {
+    document.getElementById('loginScreen').classList.remove('show');
+    document.getElementById('shell').classList.add('visible');
+    isEditing = true;
+    window._appReady = true;
+    updateLockUI();
+    renderAll();
+    buildCharts();
+  } else {
+    errEl.style.display = 'block';
+    pwEl.value = '';
+    pwEl.focus();
+  }
+}
+
+function toggleLock() {
+  if (isEditing) {
+    isEditing = false; updateLockUI(); toast('Edit mode locked'); renderAll();
+  } else {
+    document.getElementById('pwIn').value = '';
+    document.getElementById('pwErr').style.display = 'none';
+    openModal('modPw');
+  }
+}
+
+function verifyPw() {
+  if (document.getElementById('pwIn').value === PASS) {
+    closeModal('modPw'); isEditing = true; updateLockUI(); toast('Edit mode unlocked'); renderAll();
+  } else {
+    document.getElementById('pwErr').style.display = 'block';
+  }
+}
+
+function updateLockUI() {
+  var d = document.getElementById('ldot');
+  var l = document.getElementById('lbl');
+  var b = document.getElementById('lockBtn');
+  if (isEditing) {
+    d.className = 'lock-dot on'; l.textContent = 'Edit Mode'; b.textContent = '🔒 Lock';
+  } else {
+    d.className = 'lock-dot off'; l.textContent = 'View Only'; b.textContent = '🔓 Unlock';
+  }
+  ['addItemBtn','addReBtn'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.style.display = isEditing ? '' : 'none';
+  });
+}
+
+// ── HELPERS ──────────────────────────────────────────────────
+function R(n) {
+  if (n===null||n===undefined||n==='') return '—';
+  return 'R\u00A0' + Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function Rc(n) {
+  if (!n) return 'R 0';
+  var a = Math.abs(n);
+  if (a>=1e6) return 'R\u00A0'+(n/1e6).toFixed(2)+'M';
+  if (a>=1e3) return 'R\u00A0'+(n/1e3).toFixed(0)+'k';
+  return R(n);
+}
+function getPaid(itemId) {
+  return (window.payments||[]).filter(function(p){ return p.itemId===itemId; })
+    .reduce(function(s,p){ return s+(p.amount||0); }, 0);
+}
+function filteredPmts() {
+  var from = document.getElementById('pmtFrom').value;
+  var to   = document.getElementById('pmtTo').value;
+  var s    = document.getElementById('pmtSearch').value.toLowerCase();
+  return (window.payments||[]).filter(function(p){
+    if (from && p.date < from) return false;
+    if (to   && p.date > to)   return false;
+    if (s) {
+      var item = (window.budgetItems||[]).find(function(b){ return b.id===p.itemId; });
+      if (![p.supplier,p.invoice,p.comment,item?item.area:''].join(' ').toLowerCase().includes(s)) return false;
+    }
+    return true;
+  });
+}
+function ovFilteredPmts() {
+  var from = document.getElementById('ovFrom').value;
+  var to   = document.getElementById('ovTo').value;
+  if (!from && !to) return window.payments||[];
+  return (window.payments||[]).filter(function(p){
+    if (from && p.date < from) return false;
+    if (to   && p.date > to)   return false;
+    return true;
+  });
+}
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function toast(msg, err) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (err ? ' err' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.className=''; }, 2800);
+}
+function setSyncing(on) {
+  var d = document.getElementById('syncDot');
+  if (d) d.className = 'sync-dot' + (on ? ' syncing' : '');
+}
+
+// ── PAGE NAV ─────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if (name==='overview') setTimeout(buildCharts, 50);
+  if (name==='cashflow') setTimeout(buildCfCharts, 50);
+}
+
+// ── RENDER ALL ───────────────────────────────────────────────
+window.renderAll = function() {
+  renderKPIs();
+  renderBudget();
+  renderPayments();
+  renderCashflow();
+  renderRedEarth();
+  renderSuppliers();
+};
+
+function renderKPIs() {
+  var allPaid = (window.payments||[]).reduce(function(s,p){ return s+(p.amount||0); }, 0);
+  var totalBudget = (window.budgetItems||[]).reduce(function(s,b){ return s+(b.budget||0); }, 0);
+  var balance = totalBudget - allPaid;
+  var pct = totalBudget ? ((allPaid/totalBudget)*100).toFixed(1) : 0;
+  var fp = ovFilteredPmts();
+  var fpTotal = fp.reduce(function(s,p){ return s+(p.amount||0); }, 0);
+  document.getElementById('kBudget').textContent   = Rc(totalBudget);
+  document.getElementById('kPaid').textContent     = Rc(allPaid);
+  document.getElementById('kBalance').textContent  = Rc(balance);
+  document.getElementById('kItems').textContent    = (window.budgetItems||[]).length;
+  document.getElementById('kPaidPct').textContent  = pct + '%';
+  document.getElementById('kPmtCount').textContent = fp.length;
+  document.getElementById('kPmtAmt').textContent   = Rc(fpTotal);
+}
+
+function renderBudget() {
+  var search  = document.getElementById('budgetSearch').value.toLowerCase();
+  var status  = document.getElementById('budgetStatus').value;
+  var filtered = (window.budgetItems||[]).filter(function(b){
+    if (search && !(b.area+b.supplier+b.type).toLowerCase().includes(search)) return false;
+    if (status) {
+      var paid = getPaid(b.id), bud = b.budget||0, pct = bud ? paid/bud : 0;
+      if (status==='not-started' && paid>0)   return false;
+      if (status==='in-progress' && (paid===0||pct>=1)) return false;
+      if (status==='paid'  && pct<1)  return false;
+      if (status==='over'  && paid<=bud) return false;
+    }
+    return true;
+  });
+  var rows = '', tb = 0, tp = 0;
+  filtered.forEach(function(b){
+    var paid = getPaid(b.id), bud = b.budget||0, bal = bud-paid;
+    var pct = bud ? Math.min(100,(paid/bud)*100) : 0;
+    tb += bud; tp += paid;
+    var badge;
+    if (paid>bud&&bud>0)        badge='<span class="badge badge-red">Over Budget</span>';
+    else if (pct>=100)          badge='<span class="badge badge-gold">Fully Paid</span>';
+    else if (paid>0)            badge='<span class="badge badge-green">In Progress</span>';
+    else                        badge='<span class="badge badge-muted">Not Started</span>';
+    var bc = pct>=100?'var(--gold)':pct>80?'var(--red2)':'var(--green2)';
+    var acts = isEditing
+      ? '<button class="btn btn-success btn-sm" onclick="openPayModal('+b.id+')">+ Pay</button> <button class="btn btn-secondary btn-sm" onclick="openEditBudget('+b.id+')">Edit</button>'
+      : '';
+    rows += '<tr>'
+      +'<td style="color:var(--text3);font-size:.75rem;font-family:\'JetBrains Mono\',monospace;">'+b.id+'</td>'
+      +'<td style="max-width:240px;"><div style="font-weight:500;font-size:.83rem;line-height:1.35;">'+b.area+'</div>'
+      +(b.comment?'<div style="font-size:.7rem;color:var(--text3);margin-top:2px;white-space:normal;line-height:1.3;">'+b.comment.substring(0,90)+(b.comment.length>90?'…':'')+'</div>':'')+'</td>'
+      +'<td style="font-size:.8rem;color:var(--text2);">'+(b.supplier||'<span style="color:var(--text3);">—</span>')+'</td>'
+      +'<td><span class="badge badge-muted" style="font-size:.6rem;">'+(b.type||'—')+'</span></td>'
+      +'<td class="r">'+R(bud)+'</td>'
+      +'<td class="r" style="color:var(--green2);font-weight:500;">'+R(paid)+'</td>'
+      +'<td class="r" style="color:'+(bal<0?'var(--red2)':'var(--text)')+';">'+R(bal)+'</td>'
+      +'<td style="min-width:110px;"><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:'+bc+';"></div></div><div class="prog-pct">'+pct.toFixed(0)+'%</div></div></td>'
+      +'<td>'+badge+'</td>'
+      +'<td><div style="display:flex;gap:4px;">'+acts+'</div></td>'
+      +'</tr>';
+  });
+  document.getElementById('budgetBody').innerHTML = rows || '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:32px;">No items match the current filter.</td></tr>';
+  var tBal = tb - tp;
+  document.getElementById('budgetFoot').innerHTML = '<tr class="tfoot-row">'
+    +'<td class="label" colspan="4">Totals — '+filtered.length+' items</td>'
+    +'<td class="r">'+R(tb)+'</td><td class="r">'+R(tp)+'</td>'
+    +'<td class="r" style="color:'+(tBal<0?'#F1948A':'#82E0AA')+';">'+R(tBal)+'</td>'
+    +'<td colspan="3"></td></tr>';
+}
+
+function renderPayments() {
+  var fp = filteredPmts().sort(function(a,b){ return b.date.localeCompare(a.date); });
+  var rows = '';
+  fp.forEach(function(p){
+    var item = (window.budgetItems||[]).find(function(b){ return b.id===p.itemId; });
+    var acts = isEditing
+      ? '<button class="btn btn-secondary btn-sm" onclick="openEditPay('+p.idx+')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delPay('+p.idx+')">Del</button>'
+      : '';
+    rows += '<tr>'
+      +'<td style="font-family:\'JetBrains Mono\',monospace;font-size:.78rem;white-space:nowrap;">'+(p.date||'—')+'</td>'
+      +'<td style="max-width:200px;font-size:.82rem;font-weight:500;">'+(item?item.area:'—')+'</td>'
+      +'<td style="font-size:.82rem;">'+(p.supplier||'<span style="color:var(--text3);">—</span>')+'</td>'
+      +'<td style="font-family:\'JetBrains Mono\',monospace;font-size:.75rem;color:var(--text3);">'+(p.invoice||'<span style="color:var(--text3);">—</span>')+'</td>'
+      +'<td style="max-width:260px;white-space:normal;font-size:.8rem;color:var(--text2);">'+(p.comment||'—')+'</td>'
+      +'<td class="r" style="font-weight:500;">'+R(p.amount)+'</td>'
+      +'<td><div style="display:flex;gap:4px;">'+acts+'</div></td></tr>';
+  });
+  var total = fp.reduce(function(s,p){ return s+(p.amount||0); }, 0);
+  document.getElementById('pmtBody').innerHTML = rows || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px;">No payments match the current filter.</td></tr>';
+  document.getElementById('pmtFoot').innerHTML = '<tr class="tfoot-row"><td class="label" colspan="5">Period Total — '+fp.length+' payments</td><td class="r">'+R(total)+'</td><td></td></tr>';
+}
+
+function clearPmtFilters() {
+  document.getElementById('pmtFrom').value = '';
+  document.getElementById('pmtTo').value   = '';
+  document.getElementById('pmtSearch').value = '';
+  renderPayments();
+}
+
+function clearOvDates() {
+  document.getElementById('ovFrom').value = '';
+  document.getElementById('ovTo').value   = '';
+  renderAll();
+}
+
+function renderCashflow() {
+  var rows='', tp=0, tr2=0;
+  cashflowData.forEach(function(cf){
+    var p=cf.planned, r=cf.revised, v=(p&&r)?r-p:null, vp=(p&&r)?((r-p)/p*100).toFixed(1)+'%':null;
+    tp+=p||0; tr2+=r||0;
+    var vc = v===null?'':(v>0?'color:var(--green2);':v<0?'color:var(--red2);':'');
+    rows+='<tr><td style="font-weight:500;">'+cf.month+'</td>'
+      +'<td class="r">'+(p?R(p):'<span style="color:var(--text3);">—</span>')+'</td>'
+      +'<td class="r">'+(r?R(r):'<span style="color:var(--text3);">—</span>')+'</td>'
+      +'<td class="r" style="'+vc+'">'+(v!==null?R(v):'—')+'</td>'
+      +'<td>'+(vp?'<span class="badge '+(v>0?'badge-green':v<0?'badge-red':'badge-muted')+'">'+(v>0?'+':'')+vp+'</span>':'—')+'</td></tr>';
+  });
+  document.getElementById('cfBody').innerHTML = rows;
+  document.getElementById('cfFoot').innerHTML = '<tr class="tfoot-row"><td class="label">Total</td><td class="r">'+R(tp)+'</td><td class="r">'+R(tr2)+'</td><td class="r" style="color:'+(tr2-tp>0?'#82E0AA':'#F1948A')+';">'+R(tr2-tp)+'</td><td></td></tr>';
+}
+
+window.renderRedEarth = function() {
+  var rows='', tEx=0, tVat=0, tInc=0;
+  (window.redearthItems||[]).forEach(function(r,i){
+    var vat=r.amountExVat*0.15, inc=r.amountExVat*1.15;
+    tEx+=r.amountExVat; tVat+=vat; tInc+=inc;
+    var acts = isEditing
+      ? '<button class="btn btn-secondary btn-sm" onclick="editRE('+i+')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delRE('+i+')">Del</button>'
+      : '';
+    rows+='<tr>'
+      +'<td style="font-weight:500;font-size:.82rem;">'+r.supplier+'</td>'
+      +'<td style="max-width:320px;white-space:normal;font-size:.8rem;color:var(--text2);">'+r.description+'</td>'
+      +'<td class="r">'+R(r.amountExVat)+'</td>'
+      +'<td class="r" style="color:var(--text3);">'+R(vat)+'</td>'
+      +'<td class="r" style="font-weight:500;">'+R(inc)+'</td>'
+      +'<td><div style="display:flex;gap:4px;">'+acts+'</div></td></tr>';
+  });
+  document.getElementById('reBody').innerHTML = rows;
+  document.getElementById('reFoot').innerHTML = '<tr class="tfoot-row"><td class="label" colspan="2">Total</td><td class="r">'+R(tEx)+'</td><td class="r">'+R(tVat)+'</td><td class="r">'+R(tInc)+'</td><td></td></tr>';
+  document.getElementById('reKpiEx').textContent  = Rc(tEx);
+  document.getElementById('reKpiVat').textContent = Rc(tVat);
+  document.getElementById('reKpiInc').textContent = Rc(tInc);
+};
+
+function renderSuppliers() {
+  var map = {};
+  (window.payments||[]).forEach(function(p){
+    var k = p.supplier||'Unknown';
+    if (!map[k]) map[k]={total:0,count:0};
+    map[k].total += p.amount||0;
+    map[k].count++;
+  });
+  var total = (window.payments||[]).reduce(function(s,p){ return s+(p.amount||0); }, 0);
+  var sorted = Object.entries(map).sort(function(a,b){ return b[1].total-a[1].total; }).slice(0,10);
+  var rows = '';
+  sorted.forEach(function(entry){
+    var supp=entry[0], d=entry[1];
+    var pct = total ? (d.total/total*100).toFixed(1) : 0;
+    rows+='<tr>'
+      +'<td style="font-weight:500;">'+supp+'</td>'
+      +'<td class="r" style="font-weight:500;">'+R(d.total)+'</td>'
+      +'<td class="r">'+d.count+'</td>'
+      +'<td style="min-width:140px;"><div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:'+pct+'%;background:var(--accent);"></div></div><div class="prog-pct">'+pct+'%</div></div></td>'
+      +'</tr>';
+  });
+  document.getElementById('suppliersBody').innerHTML = rows;
+}
+
+// ── CHARTS ───────────────────────────────────────────────────
+var CD = {
+  plugins:{legend:{labels:{font:{family:"Inter",size:11},color:'#5C534A',padding:16}}},
+  scales:{
+    x:{grid:{display:false},ticks:{font:{family:"Inter",size:10.5},color:'#9C8E82'}},
+    y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{family:"Inter",size:10.5},color:'#9C8E82'}}
+  }
+};
+function yMoney(v){ return 'R '+(v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'k':v); }
+function destroyChart(k){ if(charts[k]){ charts[k].destroy(); charts[k]=null; } }
+
+window.buildCharts = function() {
+  var items = window.budgetItems||[];
+  var pmts  = window.payments||[];
+
+  destroyChart('bar');
+  var top15 = items.slice().sort(function(a,b){ return (b.budget||0)-(a.budget||0); }).slice(0,15);
+  charts.bar = new Chart(document.getElementById('chartBudgetBar').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:top15.map(function(b){ return b.area.length>22?b.area.substring(0,22)+'…':b.area; }),
+      datasets:[
+        {label:'Budget',data:top15.map(function(b){ return b.budget||0; }),backgroundColor:'rgba(139,69,19,0.7)',borderColor:'rgba(139,69,19,1)',borderWidth:1,borderRadius:3},
+        {label:'Paid',  data:top15.map(function(b){ return getPaid(b.id); }),backgroundColor:'rgba(45,106,79,0.75)',borderColor:'rgba(45,106,79,1)',borderWidth:1,borderRadius:3}
+      ]
+    },
+    options:{...CD,responsive:true,maintainAspectRatio:true,
+      plugins:{...CD.plugins,tooltip:{callbacks:{label:function(c){ return c.dataset.label+': R '+c.raw.toLocaleString('en-ZA',{maximumFractionDigits:0}); }}}},
+      scales:{x:{...CD.scales.x,ticks:{...CD.scales.x.ticks,maxRotation:35,minRotation:25}},y:{...CD.scales.y,ticks:{...CD.scales.y.ticks,callback:yMoney}}}}
+  });
+
+  destroyChart('doughnut');
+  var top10 = items.slice().sort(function(a,b){ return (b.budget||0)-(a.budget||0); }).slice(0,10);
+  var others = items.slice(10).reduce(function(s,b){ return s+(b.budget||0); }, 0);
+  var dc=['#8B4513','#2D6A4F','#B8860B','#1B4F72','#9B2226','#40916C','#A0522D','#154360','#7D6608','#512E5F'];
+  var grandTotal = items.reduce(function(s,b){ return s+(b.budget||0); }, 0);
+  charts.doughnut = new Chart(document.getElementById('chartDoughnut').getContext('2d'),{
+    type:'doughnut',
+    data:{
+      labels:[...top10.map(function(b){ return b.area.length>20?b.area.substring(0,20)+'…':b.area; }),'All Others'],
+      datasets:[{data:[...top10.map(function(b){ return b.budget||0; }),others],backgroundColor:[...dc,'#9C8E82'],borderColor:'white',borderWidth:2}]
+    },
+    options:{responsive:true,maintainAspectRatio:true,cutout:'60%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){ return c.label+': R '+c.raw.toLocaleString('en-ZA',{maximumFractionDigits:0})+' ('+((c.raw/grandTotal)*100).toFixed(1)+'%)'; }}}}}
+  });
+
+  destroyChart('monthly');
+  var mMap = {};
+  pmts.forEach(function(p){ if(!p.date)return; var k=p.date.substring(0,7); mMap[k]=(mMap[k]||0)+(p.amount||0); });
+  var months = Object.keys(mMap).sort();
+  charts.monthly = new Chart(document.getElementById('chartMonthly').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:months.map(function(m){ var d=new Date(m+'-01'); return d.toLocaleDateString('en-ZA',{month:'short',year:'2-digit'}); }),
+      datasets:[{label:'Payments Made',data:months.map(function(m){ return mMap[m]; }),backgroundColor:'rgba(139,69,19,0.75)',borderColor:'rgba(139,69,19,1)',borderWidth:1,borderRadius:4}]
+    },
+    options:{...CD,responsive:true,maintainAspectRatio:true,
+      plugins:{...CD.plugins,tooltip:{callbacks:{label:function(c){ return 'R '+c.raw.toLocaleString('en-ZA',{maximumFractionDigits:0}); }}}},
+      scales:{x:{...CD.scales.x},y:{...CD.scales.y,ticks:{...CD.scales.y.ticks,callback:yMoney}}}}
+  });
+
+  destroyChart('cashflow');
+  charts.cashflow = new Chart(document.getElementById('chartCashflow').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:cashflowData.map(function(c){ return c.month; }),
+      datasets:[
+        {label:'Planned', data:cashflowData.map(function(c){ return c.planned; }),backgroundColor:'rgba(27,79,114,0.6)',borderColor:'rgba(27,79,114,1)',borderWidth:1,borderRadius:3},
+        {label:'Revised', data:cashflowData.map(function(c){ return c.revised; }),backgroundColor:'rgba(45,106,79,0.6)',borderColor:'rgba(45,106,79,1)',borderWidth:1,borderRadius:3}
+      ]
+    },
+    options:{...CD,responsive:true,maintainAspectRatio:true,
+      scales:{x:{...CD.scales.x,ticks:{...CD.scales.x.ticks,maxRotation:30}},y:{...CD.scales.y,ticks:{...CD.scales.y.ticks,callback:yMoney}}}}
+  });
+};
+
+function buildCfCharts() {
+  destroyChart('cfBar'); destroyChart('cfLine');
+  charts.cfBar = new Chart(document.getElementById('chartCfBar').getContext('2d'),{
+    type:'bar',
+    data:{
+      labels:cashflowData.map(function(c){ return c.month; }),
+      datasets:[
+        {label:'Planned',data:cashflowData.map(function(c){ return c.planned; }),backgroundColor:'rgba(27,79,114,0.65)',borderColor:'rgba(27,79,114,1)',borderWidth:1,borderRadius:3},
+        {label:'Revised',data:cashflowData.map(function(c){ return c.revised; }),backgroundColor:'rgba(45,106,79,0.65)',borderColor:'rgba(45,106,79,1)',borderWidth:1,borderRadius:3}
+      ]
+    },
+    options:{...CD,responsive:true,maintainAspectRatio:true,
+      scales:{x:{...CD.scales.x,ticks:{...CD.scales.x.ticks,maxRotation:35}},y:{...CD.scales.y,ticks:{...CD.scales.y.ticks,callback:yMoney}}}}
+  });
+  var cp=0, cr=0;
+  var cumP = cashflowData.map(function(c){ cp+=(c.planned||0); return cp; });
+  var cumR = cashflowData.map(function(c){ cr+=(c.revised||0); return cr; });
+  charts.cfLine = new Chart(document.getElementById('chartCfLine').getContext('2d'),{
+    type:'line',
+    data:{
+      labels:cashflowData.map(function(c){ return c.month; }),
+      datasets:[
+        {label:'Cumulative Planned',data:cumP,borderColor:'rgba(27,79,114,0.9)',backgroundColor:'rgba(27,79,114,0.05)',fill:true,tension:0.3,pointRadius:3},
+        {label:'Cumulative Revised',data:cumR,borderColor:'rgba(45,106,79,0.9)',backgroundColor:'rgba(45,106,79,0.07)',fill:true,tension:0.3,pointRadius:3}
+      ]
+    },
+    options:{...CD,responsive:true,maintainAspectRatio:true,
+      scales:{x:{...CD.scales.x,ticks:{...CD.scales.x.ticks,maxRotation:35}},y:{...CD.scales.y,ticks:{...CD.scales.y.ticks,callback:yMoney}}}}
+  });
+}
+
+// ── PAYMENT MODAL ────────────────────────────────────────────
+function openPayModal(id) {
+  if (!isEditing) return;
+  currentPayItemId = id;
+  var item = (window.budgetItems||[]).find(function(b){ return b.id===id; });
+  document.getElementById('payCtx').textContent  = '#'+item.id+' — '+item.area;
+  document.getElementById('payDate').value        = new Date().toISOString().split('T')[0];
+  document.getElementById('payAmt').value         = '';
+  document.getElementById('payInv').value         = '';
+  document.getElementById('paySupp').value        = item.supplier||'';
+  document.getElementById('payCmt').value         = '';
+  openModal('modPay');
+}
+function savePay() {
+  var date    = document.getElementById('payDate').value;
+  var amount  = parseFloat(document.getElementById('payAmt').value);
+  var invoice = document.getElementById('payInv').value.trim();
+  var supplier= document.getElementById('paySupp').value.trim();
+  var comment = document.getElementById('payCmt').value.trim();
+  if (!date||!amount||!comment) { toast('Date, Amount and Comment are required',true); return; }
+  var pmts = window.payments||[];
+  var nextIdx = pmts.length ? Math.max.apply(null, pmts.map(function(p){ return p.idx; })) + 1 : 0;
+  var newPay = {idx:nextIdx, itemId:currentPayItemId, date:date, amount:amount, invoice:invoice, supplier:supplier, comment:comment};
+  setSyncing(true);
+  window.db_setPayment(newPay).then(function(){ setSyncing(false); toast('Payment of '+R(amount)+' saved'); closeModal('modPay'); });
+}
+
+function openEditPay(idx) {
+  if (!isEditing) return;
+  currentEditPayIdx = idx;
+  var p = (window.payments||[]).find(function(x){ return x.idx===idx; });
+  document.getElementById('epDate').value  = p.date;
+  document.getElementById('epAmt').value   = p.amount;
+  document.getElementById('epInv').value   = p.invoice;
+  document.getElementById('epSupp').value  = p.supplier;
+  document.getElementById('epCmt').value   = p.comment;
+  openModal('modEditPay');
+}
+function saveEditPay() {
+  var p = (window.payments||[]).find(function(x){ return x.idx===currentEditPayIdx; });
+  var updated = Object.assign({}, p, {
+    date:    document.getElementById('epDate').value,
+    amount:  parseFloat(document.getElementById('epAmt').value)||0,
+    invoice: document.getElementById('epInv').value,
+    supplier:document.getElementById('epSupp').value,
+    comment: document.getElementById('epCmt').value
+  });
+  setSyncing(true);
+  window.db_setPayment(updated).then(function(){ setSyncing(false); toast('Payment updated'); closeModal('modEditPay'); });
+}
+function delPay(idx) {
+  if (!isEditing) return;
+  if (!confirm('Delete this payment?')) return;
+  setSyncing(true);
+  window.db_deletePayment(idx).then(function(){ setSyncing(false); toast('Payment deleted'); });
+}
+
+// ── BUDGET EDIT ──────────────────────────────────────────────
+function openEditBudget(id) {
+  if (!isEditing) return;
+  currentEditItemId = id;
+  var item = (window.budgetItems||[]).find(function(b){ return b.id===id; });
+  document.getElementById('budgetCtx').textContent = '#'+item.id+' — '+item.area;
+  document.getElementById('ebAmt').value  = item.budget||'';
+  document.getElementById('ebSupp').value = item.supplier||'';
+  document.getElementById('ebCmt').value  = item.comment||'';
+  document.getElementById('ebReason').value = '';
+  openModal('modBudget');
+}
+function saveBudgetEdit() {
+  var item = (window.budgetItems||[]).find(function(b){ return b.id===currentEditItemId; });
+  var updated = Object.assign({}, item, {
+    budget:   parseFloat(document.getElementById('ebAmt').value)||0,
+    supplier: document.getElementById('ebSupp').value,
+    comment:  document.getElementById('ebCmt').value
+  });
+  setSyncing(true);
+  window.db_setBudgetItem(updated).then(function(){ setSyncing(false); toast('Budget line updated'); closeModal('modBudget'); });
+}
+
+function openAddItem() {
+  if (!isEditing) return;
+  ['aiArea','aiSupp','aiType','aiCmt'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('aiAmt').value = '';
+  openModal('modAddItem');
+}
+function saveAddItem() {
+  var area = document.getElementById('aiArea').value.trim();
+  var amt  = parseFloat(document.getElementById('aiAmt').value)||0;
+  if (!area||!amt) { toast('Area and Amount are required',true); return; }
+  var items = window.budgetItems||[];
+  var newId = items.length ? Math.max.apply(null, items.map(function(b){ return b.id; })) + 1 : 1;
+  var newItem = {id:newId, area:area, supplier:document.getElementById('aiSupp').value,
+    comment:document.getElementById('aiCmt').value, type:document.getElementById('aiType').value, budget:amt};
+  setSyncing(true);
+  window.db_setBudgetItem(newItem).then(function(){ setSyncing(false); toast('Budget item added'); closeModal('modAddItem'); });
+}
+
+// ── RED EARTH CRUD ───────────────────────────────────────────
+function openAddRE() {
+  ['reSupp','reDesc','reAmt'].forEach(function(id){ document.getElementById(id).value=''; });
+  openModal('modAddRE');
+}
+function saveAddRE() {
+  var supp = document.getElementById('reSupp').value.trim();
+  var desc = document.getElementById('reDesc').value.trim();
+  var amt  = parseFloat(document.getElementById('reAmt').value)||0;
+  if (!supp||!desc||!amt) { toast('All fields required',true); return; }
+  setSyncing(true);
+  window.db_addRedEarth({supplier:supp,description:desc,amountExVat:amt})
+    .then(function(){ setSyncing(false); toast('Red Earth item added'); closeModal('modAddRE'); });
+}
+function editRE(i) {
+  var r = (window.redearthItems||[])[i];
+  var v = prompt('Edit amount (ex VAT) for:\n'+r.description, r.amountExVat);
+  if (v!==null) {
+    var updated = Object.assign({}, r, {amountExVat: parseFloat(v)||r.amountExVat});
+    setSyncing(true);
+    window.db_setRedEarth(i, updated).then(function(){ setSyncing(false); toast('Updated'); });
+  }
+}
+function delRE(i) {
+  if (!confirm('Delete this item?')) return;
+  setSyncing(true);
+  window.db_deleteRedEarth(i).then(function(){ setSyncing(false); toast('Deleted'); });
+}
+
+// ── UNLOCK MODAL ─────────────────────────────────────────────
+function verifyPw() {
+  if (document.getElementById('pwIn').value === PASS) {
+    closeModal('modPw'); isEditing=true; updateLockUI(); toast('Edit mode unlocked'); renderAll();
+  } else {
+    document.getElementById('pwErr').style.display='block';
+  }
+}
+
+// ── EXPORT EXCEL ─────────────────────────────────────────────
+function exportExcel() {
+  var wb = XLSX.utils.book_new();
+  var items = window.budgetItems||[], pmts = window.payments||[];
+  var bd = [['#','Area / Description','Supplier','Type','Budget (ex VAT)','Paid Total','Balance','% Used']];
+  items.forEach(function(b){
+    var paid=getPaid(b.id), bal=(b.budget||0)-paid, pct=b.budget?((paid/b.budget)*100).toFixed(1)+'%':'0%';
+    bd.push([b.id,b.area,b.supplier,b.type,b.budget||0,paid,bal,pct]);
+  });
+  var tb=items.reduce(function(s,b){ return s+(b.budget||0); },0);
+  var tp=pmts.reduce(function(s,p){ return s+(p.amount||0); },0);
+  bd.push(['','','','','TOTAL',tb,tp,tb-tp]);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(bd),'Budget vs Actuals');
+
+  var fp = filteredPmts().sort(function(a,b){ return b.date.localeCompare(a.date); });
+  var pd = [['Date','Budget Item','Supplier','Invoice #','Comment','Amount (ex VAT)']];
+  fp.forEach(function(p){ var item=items.find(function(b){ return b.id===p.itemId; }); pd.push([p.date,item?item.area:'?',p.supplier,p.invoice,p.comment,p.amount]); });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pd),'All Payments');
+
+  var cd = [['Month','Planned (Week 2)','Revised (Week 4)','Variance']];
+  cashflowData.forEach(function(c){ cd.push([c.month,c.planned||'',c.revised||'',(c.planned&&c.revised)?c.revised-c.planned:'']); });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(cd),'Cashflow Forecast');
+
+  var rd = [['Supplier','Description','Amount (ex VAT)','VAT (15%)','Total (incl VAT)']];
+  (window.redearthItems||[]).forEach(function(r){ rd.push([r.supplier,r.description,r.amountExVat,r.amountExVat*0.15,r.amountExVat*1.15]); });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rd),'Red Earth Deductions');
+
+  XLSX.writeFile(wb,'RML_Revamp_Budget_'+new Date().toISOString().split('T')[0]+'.xlsx');
+  toast('Excel exported');
+}
+
+// ── EXPORT PDF ───────────────────────────────────────────────
+function exportPDF() {
+  var items=window.budgetItems||[], pmts=window.payments||[];
+  var fp=filteredPmts().sort(function(a,b){ return b.date.localeCompare(a.date); });
+  var tb=items.reduce(function(s,b){ return s+(b.budget||0); },0);
+  var tp=pmts.reduce(function(s,p){ return s+(p.amount||0); },0);
+  var date=new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
+  var h='<!DOCTYPE html><html><head><title>RML Revamp Budget Report</title><style>'
+    +'*{box-sizing:border-box;margin:0;padding:0;}body{font-family:"Helvetica Neue",Arial,sans-serif;color:#1A1714;padding:40px;font-size:11px;}'
+    +'.hd{border-bottom:3px solid #8B4513;padding-bottom:14px;margin-bottom:18px;}h1{font-size:20px;}.sub{color:#9C8E82;font-size:10px;margin-top:3px;}'
+    +'.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}.kpi{padding:12px 14px;border:1px solid #E2D9CF;border-top:3px solid #8B4513;border-radius:3px;}.kl{font-size:8px;text-transform:uppercase;letter-spacing:.15em;color:#9C8E82;margin-bottom:5px;}.kv{font-size:14px;font-weight:700;}'
+    +'.st{font-size:13px;font-weight:700;margin:18px 0 8px;padding:6px 10px;background:#F8F5F0;border-left:3px solid #8B4513;}'
+    +'table{width:100%;border-collapse:collapse;}th{background:#1A1714;color:rgba(255,255,255,.75);padding:6px 9px;font-size:8px;text-align:left;letter-spacing:.1em;text-transform:uppercase;}th.r,td.r{text-align:right;}'
+    +'td{padding:7px 9px;border-bottom:1px solid #F2EDE6;font-size:10px;}tr:nth-child(even) td{background:#F8F5F0;}.ft td{background:#1A1714;color:white;font-weight:700;font-size:10px;padding:8px 9px;}'
+    +'</style></head><body>'
+    +'<div class="hd"><h1>Malewane Lodge — Revamp Budget Report</h1><div class="sub">Generated: '+date+'</div></div>'
+    +'<div class="kpis"><div class="kpi"><div class="kl">Total Budget (ex VAT)</div><div class="kv">'+Rc(tb)+'</div></div>'
+    +'<div class="kpi"><div class="kl">Total Paid</div><div class="kv">'+Rc(tp)+'</div></div>'
+    +'<div class="kpi"><div class="kl">Balance Remaining</div><div class="kv">'+Rc(tb-tp)+'</div></div>'
+    +'<div class="kpi"><div class="kl">Payments (Period)</div><div class="kv">'+fp.length+'</div></div></div>'
+    +'<div class="st">Budget vs Actuals</div><table><thead><tr><th>#</th><th>Area / Description</th><th>Supplier</th><th class="r">Budget</th><th class="r">Paid</th><th class="r">Balance</th><th class="r">%</th></tr></thead><tbody>';
+  items.forEach(function(b){
+    var paid=getPaid(b.id),bal=(b.budget||0)-paid,pct=b.budget?((paid/b.budget)*100).toFixed(0)+'%':'0%';
+    h+='<tr><td>'+b.id+'</td><td>'+b.area+'</td><td>'+(b.supplier||'—')+'</td><td class="r">'+R(b.budget)+'</td><td class="r">'+R(paid)+'</td><td class="r" style="'+(bal<0?'color:#9B2226;':'')+'">'+R(bal)+'</td><td class="r">'+pct+'</td></tr>';
+  });
+  h+='</tbody><tfoot><tr class="ft"><td colspan="3">TOTAL</td><td class="r">'+R(tb)+'</td><td class="r">'+R(tp)+'</td><td class="r">'+R(tb-tp)+'</td><td></td></tr></tfoot></table>';
+  if (fp.length) {
+    h+='<div class="st">Payment Ledger ('+fp.length+' records)</div><table><thead><tr><th>Date</th><th>Budget Item</th><th>Supplier</th><th>Invoice</th><th>Comment</th><th class="r">Amount</th></tr></thead><tbody>';
+    fp.forEach(function(p){ var item=items.find(function(b){ return b.id===p.itemId; }); h+='<tr><td>'+p.date+'</td><td>'+(item?item.area:'?')+'</td><td>'+(p.supplier||'—')+'</td><td>'+(p.invoice||'—')+'</td><td>'+(p.comment||'—')+'</td><td class="r">'+R(p.amount)+'</td></tr>'; });
+    h+='</tbody><tfoot><tr class="ft"><td colspan="5">TOTAL</td><td class="r">'+R(fp.reduce(function(s,p){ return s+(p.amount||0); },0))+'</td></tr></tfoot></table>';
+  }
+  h+='</body></html>';
+  var w=window.open('','_blank'); w.document.write(h); w.document.close(); setTimeout(function(){ w.print(); },600);
+  toast('PDF print dialog opened');
+}
+</script>
+</body>
+</html>
